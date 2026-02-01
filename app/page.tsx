@@ -1,5 +1,6 @@
 import WasteCollectionCalendar from '@/components/WasteCollectionCalendar';
 import AddressSearchForm from '@/components/AddressSearchForm';
+import HomeWithoutParams from '@/components/HomeWithoutParams';
 import { BAVApiService } from '@/lib/services/bav-api.service';
 import { cacheService } from '@/lib/services/cache.service';
 import type { WasteCalendarResponse } from '@/lib/types/bav-api.types';
@@ -62,13 +63,7 @@ export default async function Home({
     <div className="min-h-screen bg-zinc-50 font-sans dark:bg-black">
       <main className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-4xl flex-col items-center justify-center py-16 px-8 sm:px-16">
         {!hasParams ? (
-          <div className="flex w-full max-w-md flex-col items-center gap-6">
-            <p className="text-center text-zinc-600 dark:text-zinc-400">
-              Abfuhrtermine für Ihre Adresse im BAV-Gebiet. Wählen Sie Ort und
-              Straße, um den Abfuhrkalender anzuzeigen.
-            </p>
-            <AddressSearchForm />
-          </div>
+          <HomeWithoutParams />
         ) : error ? (
           <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center dark:border-red-800 dark:bg-red-900/20">
             <h1 className="mb-2 text-2xl font-bold text-red-900 dark:text-red-400">

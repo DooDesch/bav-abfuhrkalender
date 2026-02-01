@@ -38,33 +38,33 @@ export default function WasteCollectionCalendar({
     [data.fractions, availableFractionIds]
   );
 
-  // Initialize with all available fractions selected by default
-  const [selectedFractions, setSelectedFractions] = useState<Set<number>>(
-    () => {
-      // Try to load from localStorage
-      if (typeof window !== 'undefined') {
-        try {
-          const saved = localStorage.getItem(FRACTION_FILTER_STORAGE_KEY);
-          if (saved) {
-            const parsed = JSON.parse(saved) as number[];
-            const savedSet = new Set(parsed);
-            // Only keep fractions that are still available
-            const filtered = new Set(
-              Array.from(savedSet).filter((id) =>
-                availableFractionIds.has(id)
-              )
-            );
-            // If we have valid saved fractions, use them, otherwise use all available
-            return filtered.size > 0 ? filtered : new Set(availableFractions.map((f) => f.id));
-          }
-        } catch (e) {
-          // Ignore errors
-        }
-      }
-      // Default: all available fractions selected
-      return new Set(availableFractions.map((f) => f.id));
-    }
+  // Initialize with all available fractions selected (same on server and first client render to avoid hydration mismatch)
+  const [selectedFractions, setSelectedFractions] = useState<Set<number>>(() =>
+    new Set(availableFractions.map((f) => f.id))
   );
+
+  // After mount, restore saved filter from localStorage so server and initial client HTML match
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  useEffect(() => {
+    if (!mounted || typeof window === 'undefined') return;
+    try {
+      const saved = localStorage.getItem(FRACTION_FILTER_STORAGE_KEY);
+      if (!saved) return;
+      const parsed = JSON.parse(saved) as number[];
+      const savedSet = new Set(parsed);
+      const filtered = new Set(
+        Array.from(savedSet).filter((id) => availableFractionIds.has(id))
+      );
+      if (filtered.size > 0) {
+        setSelectedFractions(filtered);
+      }
+    } catch {
+      // Ignore errors
+    }
+  }, [mounted]);
 
   // Save to localStorage when selection changes
   useEffect(() => {
@@ -109,7 +109,7 @@ export default function WasteCollectionCalendar({
             <span>{data.location.name}</span>
           </div>
           <Link
-            href="/"
+            href="/?form=1"
             className="cursor-pointer rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
             Andere Adresse suchen

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAddressStore } from '@/lib/stores/address.store';
 import LocationAutocomplete from '@/components/LocationAutocomplete';
 import StreetAutocomplete from '@/components/StreetAutocomplete';
+import { formatRelativeTime, formatExactDateTime } from '@/lib/utils/formatRelativeTime';
 
 interface ApiResponse {
   success: boolean;
@@ -224,26 +225,11 @@ export default function PlaygroundPage() {
                 </div>
               </div>
               {response.cacheExpiresAt && (
-                <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-                  Cache läuft ab:{' '}
-                  {(() => {
-                    try {
-                      const date = new Date(response.cacheExpiresAt);
-                      if (isNaN(date.getTime())) {
-                        return response.cacheExpiresAt;
-                      }
-                      return date.toLocaleString('de-DE', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit',
-                      });
-                    } catch {
-                      return response.cacheExpiresAt;
-                    }
-                  })()}
+                <p
+                  className="mt-2 text-xs text-zinc-500 dark:text-zinc-400"
+                  title={formatExactDateTime(response.cacheExpiresAt)}
+                >
+                  Cache läuft ab: {formatRelativeTime(response.cacheExpiresAt)}
                 </p>
               )}
               {response.timestamp && (

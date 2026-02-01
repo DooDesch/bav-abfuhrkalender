@@ -40,8 +40,9 @@ export default function FractionFilter({
   return (
     <div className="relative">
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+        className="flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
       >
         <svg
           className="h-4 w-4"
@@ -67,8 +68,9 @@ export default function FractionFilter({
       {isOpen && (
         <>
           <div
-            className="fixed inset-0 z-10"
+            className="fixed inset-0 z-10 cursor-pointer"
             onClick={() => setIsOpen(false)}
+            aria-hidden
           />
           <div className="absolute right-0 top-full z-20 mt-2 w-64 rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
             <div className="border-b border-zinc-200 p-3 dark:border-zinc-700">
@@ -78,15 +80,17 @@ export default function FractionFilter({
                 </h3>
                 <div className="flex gap-1">
                   <button
+                    type="button"
                     onClick={selectAll}
-                    className="text-xs text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
+                    className="cursor-pointer text-xs text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
                   >
                     Alle
                   </button>
                   <span className="text-zinc-400">•</span>
                   <button
+                    type="button"
                     onClick={deselectAll}
-                    className="text-xs text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
+                    className="cursor-pointer text-xs text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
                   >
                     Keine
                   </button>

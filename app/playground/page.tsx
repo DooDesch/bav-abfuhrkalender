@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import LocationAutocomplete from '@/components/LocationAutocomplete';
+import StreetAutocomplete from '@/components/StreetAutocomplete';
 
 interface ApiResponse {
   success: boolean;
@@ -12,9 +14,13 @@ interface ApiResponse {
 }
 
 export default function PlaygroundPage() {
+  const [location, setLocation] = useState('');
+  const [street, setStreet] = useState('');
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<ApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const canSend = location.trim() !== '' && street.trim() !== '';
 
   const handleGet = async () => {
     setLoading(true);
@@ -22,7 +28,8 @@ export default function PlaygroundPage() {
     setResponse(null);
 
     try {
-      const res = await fetch('/api/abfuhrkalender');
+      const url = `/api/abfuhrkalender?location=${encodeURIComponent(location.trim())}&street=${encodeURIComponent(street.trim())}`;
+      const res = await fetch(url);
       const data = await res.json();
       setResponse(data);
     } catch (err) {
@@ -40,9 +47,8 @@ export default function PlaygroundPage() {
     setResponse(null);
 
     try {
-      const res = await fetch('/api/abfuhrkalender', {
-        method: 'POST',
-      });
+      const url = `/api/abfuhrkalender?location=${encodeURIComponent(location.trim())}&street=${encodeURIComponent(street.trim())}`;
+      const res = await fetch(url, { method: 'POST' });
       const data = await res.json();
       setResponse(data);
     } catch (err) {
@@ -63,6 +69,38 @@ export default function PlaygroundPage() {
         <p className="mt-2 text-zinc-600 dark:text-zinc-400">
           Teste die Abfuhrkalender API-Endpunkte
         </p>
+      </div>
+
+      {/* Query parameters */}
+      <div className="space-y-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+        <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
+          Parameter
+        </h2>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          Query-Parameter <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-700">location</code> und{' '}
+          <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-700">street</code> sind erforderlich.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <LocationAutocomplete
+              value={location}
+              onChange={setLocation}
+              id="playground-location"
+              label="Ort (location)"
+              placeholder="z. B. Wermelskirchen"
+            />
+          </div>
+          <div>
+            <StreetAutocomplete
+              location={location}
+              value={street}
+              onChange={setStreet}
+              id="playground-street"
+              label="Straße (street)"
+              placeholder="z. B. Beispielstraße"
+            />
+          </div>
+        </div>
       </div>
 
       {/* API Endpoints */}
@@ -89,7 +127,7 @@ export default function PlaygroundPage() {
             </p>
             <button
               onClick={handleGet}
-              disabled={loading}
+              disabled={loading || !canSend}
               className="w-full rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
             >
               {loading ? 'Lädt...' : 'GET Request senden'}
@@ -113,7 +151,7 @@ export default function PlaygroundPage() {
             </p>
             <button
               onClick={handlePost}
-              disabled={loading}
+              disabled={loading || !canSend}
               className="w-full rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
             >
               {loading ? 'Lädt...' : 'POST Request senden'}

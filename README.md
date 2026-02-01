@@ -1,12 +1,13 @@
 # BAV Abfuhrkalender API
 
-Eine Next.js App, die Abfuhrkalender-Daten für die Straße "Elbringhausen" in Wermelskirchen von der BAV API abruft und als REST API sowie Frontend bereitstellt.
+Eine Next.js App, die Abfuhrkalender-Daten von der BAV API abruft und als REST API sowie Frontend bereitstellt. Ort und Straße werden vom Nutzer eingegeben – die App zeigt ein Formular zur Eingabe; nach Angabe beider Werte erscheint der Abfuhrkalender.
 
 ## Features
 
-- REST API Endpoint für Abfuhrkalender-Daten
+- REST API Endpoint für Abfuhrkalender-Daten (Ort und Straße per Query-Parameter)
+- Frontend mit Formular zur Eingabe von Ort und Straße
 - Modernes Frontend mit React Server Components
-- In-Memory Caching für bessere Performance
+- In-Memory Caching pro Ort/Straße
 - Next.js Built-in Caching
 - TypeScript für vollständige Type-Safety
 - Responsive Design mit Tailwind CSS
@@ -31,7 +32,7 @@ pnpm install
 cp .env.example .env.local
 ```
 
-Die App funktioniert auch ohne `.env.local`, da Standardwerte verwendet werden.
+Die App funktioniert auch ohne `.env.local`, da Standardwerte für BAV API und Cache verwendet werden.
 
 ## Entwicklung
 
@@ -40,7 +41,7 @@ Development Server starten:
 pnpm dev
 ```
 
-Die App ist dann unter `http://localhost:3000` verfügbar.
+Die App ist dann unter `http://localhost:3000` verfügbar. Auf der Startseite können Ort und Straße eingegeben werden; nach dem Absenden wird der Abfuhrkalender für diese Kombination angezeigt.
 
 ## Build
 
@@ -56,26 +57,35 @@ pnpm start
 
 ## API Endpoints
 
-### GET `/api/abfuhrkalender`
+### GET `/api/abfuhrkalender?location=<Ort>&street=<Straße>`
 
-Gibt die Abfuhrkalender-Daten für die Straße "Elbringhausen" in Wermelskirchen zurück.
+Gibt die Abfuhrkalender-Daten für den angegebenen Ort und die Straße zurück. Beide Query-Parameter sind erforderlich.
+
+**Query-Parameter:**
+- `location` (erforderlich): Ortsname, z. B. „Beispielstadt“
+- `street` (erforderlich): Straßenname, z. B. „Beispielstraße“
+
+**Beispiel:**
+```
+GET /api/abfuhrkalender?location=Beispielstadt&street=Beispielstraße
+```
 
 **Response:**
 ```json
 {
   "success": true,
   "data": {
-    "ort": {
-      "id": 2813240,
-      "name": "Wermelskirchen"
+    "location": {
+      "id": 1234567,
+      "name": "Beispielstadt"
     },
-    "strasse": {
-      "id": 12345,
-      "name": "Elbringhausen"
+    "street": {
+      "id": 1,
+      "name": "Beispielstraße"
     },
-    "hausnummern": [...],
-    "fraktionen": [...],
-    "termine": [...]
+    "houseNumbers": [],
+    "fractions": [],
+    "appointments": []
   },
   "cached": false,
   "cacheExpiresAt": "2026-02-02T16:00:00Z",
@@ -83,9 +93,11 @@ Gibt die Abfuhrkalender-Daten für die Straße "Elbringhausen" in Wermelskirchen
 }
 ```
 
-### POST `/api/abfuhrkalender`
+Fehlen `location` oder `street`, antwortet die API mit Status 400 und einer Fehlermeldung.
 
-Aktualisiert den Cache manuell und gibt frische Daten zurück.
+### POST `/api/abfuhrkalender?location=<Ort>&street=<Straße>`
+
+Aktualisiert den Cache für die angegebene Ort/Straße-Kombination und gibt frische Daten zurück. Gleiche Query-Parameter wie bei GET.
 
 ## Projektstruktur
 
@@ -93,19 +105,23 @@ Aktualisiert den Cache manuell und gibt frische Daten zurück.
 ├── app/
 │   ├── api/
 │   │   └── abfuhrkalender/
-│   │       └── route.ts          # API Route Handler
+│   │       ├── route.ts          # API Route Handler
+│   │       └── route.test.ts      # Route Tests
 │   ├── layout.tsx                # Root Layout
 │   ├── page.tsx                  # Frontend Homepage
 │   └── globals.css               # Global Styles
 ├── components/
-│   ├── Abfuhrkalender.tsx        # Hauptkomponente
-│   ├── TerminListe.tsx           # Termin-Liste
-│   └── FraktionBadge.tsx         # Fraktion Badge
+│   ├── AddressSearchForm.tsx     # Formular Ort/Straße
+│   ├── WasteCollectionCalendar.tsx
+│   ├── AppointmentList.tsx
+│   ├── FractionBadge.tsx
+│   ├── FractionFilter.tsx
+│   └── Navigation.tsx
 ├── lib/
 │   ├── config/
 │   │   └── constants.ts          # Konfiguration
 │   ├── types/
-│   │   └── bav-api.types.ts      # TypeScript Types
+│   │   └── bav-api.types.ts       # TypeScript Types
 │   ├── services/
 │   │   ├── bav-api.service.ts    # BAV API Service
 │   │   └── cache.service.ts      # Cache Service
@@ -119,8 +135,9 @@ Aktualisiert den Cache manuell und gibt frische Daten zurück.
 Die App kann über Environment-Variablen konfiguriert werden:
 
 - `BAV_API_BASE_URL`: Base URL der BAV API (Standard: `https://bav-abfallapp.regioit.de/abfall-app-bav/rest`)
-- `CACHE_TTL`: Cache TTL in Sekunden (Standard: `86400` = 24 Stunden)
-- `NEXT_PUBLIC_APP_URL`: Public URL der App (Standard: `http://localhost:3000`)
+- `CACHE_TTL`: Cache TTL in Sekunden (Standard: 3600 = 1 Stunde)
+
+Ort und Straße werden nicht über die Umgebung konfiguriert, sondern vom Nutzer im Frontend oder per API-Query-Parameter angegeben.
 
 ## License
 

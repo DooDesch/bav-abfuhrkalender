@@ -1,12 +1,24 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 export default function Navigation() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const hasLocationAndStreet =
+    pathname === '/' &&
+    searchParams.get('location')?.trim() &&
+    searchParams.get('street')?.trim();
 
   const isActive = (path: string) => pathname === path;
+
+  const linkClass = (active: boolean) =>
+    `cursor-pointer rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+      active
+        ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50'
+        : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50'
+    }`;
 
   return (
     <nav className="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
@@ -15,33 +27,33 @@ export default function Navigation() {
           <div className="flex items-center gap-8">
             <Link
               href="/"
-              className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+              className="cursor-pointer text-lg font-semibold text-zinc-900 dark:text-zinc-50"
             >
               BAV Abfuhrkalender
             </Link>
             <div className="flex gap-1">
               <Link
                 href="/"
-                className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                  isActive('/')
-                    ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50'
-                    : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50'
-                }`}
+                className={linkClass(isActive('/'))}
               >
                 Kalender
               </Link>
               <Link
                 href="/playground"
-                className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                  isActive('/playground')
-                    ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50'
-                    : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50'
-                }`}
+                className={linkClass(isActive('/playground'))}
               >
                 API Playground
               </Link>
             </div>
           </div>
+          {hasLocationAndStreet && (
+            <Link
+              href="/"
+              className="cursor-pointer rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 hover:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:border-zinc-500"
+            >
+              Andere Adresse
+            </Link>
+          )}
         </div>
       </div>
     </nav>

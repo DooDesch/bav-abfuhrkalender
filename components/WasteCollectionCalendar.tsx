@@ -1,25 +1,47 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useState, useEffect, useMemo } from 'react';
 import type { WasteCalendarResponse } from '@/lib/types/bav-api.types';
+import { LAST_ADDRESS_STORAGE_KEY } from '@/lib/config/constants';
 import AppointmentList from './AppointmentList';
 import FractionFilter from './FractionFilter';
 
 interface WasteCollectionCalendarProps {
   data: WasteCalendarResponse;
+  location?: string;
+  street?: string;
 }
 
 const STORAGE_KEY = 'bav-waste-collection-filter';
 
 export default function WasteCollectionCalendar({
   data,
+  location: locationProp,
+  street: streetProp,
 }: WasteCollectionCalendarProps) {
-  // Get fractions that actually appear in appointments
-  const availableFractionIds = new Set(
-    data.appointments.map((t) => t.fractionId)
+  // Save current address as last used when calendar is displayed (e.g. direct link or back)
+  useEffect(() => {
+    const loc = locationProp?.trim();
+    const str = streetProp?.trim();
+    if (!loc || !str || typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(
+        LAST_ADDRESS_STORAGE_KEY,
+        JSON.stringify({ location: loc, street: str })
+      );
+    } catch {
+      // Ignore storage errors
+    }
+  }, [locationProp, streetProp]);
+  // Get fractions that actually appear in appointments (stable refs for effect deps)
+  const availableFractionIds = useMemo(
+    () => new Set(data.appointments.map((t) => t.fractionId)),
+    [data.appointments]
   );
-  const availableFractions = data.fractions.filter((f) =>
-    availableFractionIds.has(f.id)
+  const availableFractions = useMemo(
+    () => data.fractions.filter((f) => availableFractionIds.has(f.id)),
+    [data.fractions, availableFractionIds]
   );
 
   // Initialize with all available fractions selected by default
@@ -64,17 +86,15 @@ export default function WasteCollectionCalendar({
     }
   }, [selectedFractions]);
 
-  // Update selection when available fractions change
+  // Clean up selection when available fractions change (e.g. new address)
   useEffect(() => {
     const currentAvailableIds = new Set(availableFractions.map((f) => f.id));
-    // Remove fractions that are no longer available
     const filtered = new Set(
       Array.from(selectedFractions).filter((id) =>
         currentAvailableIds.has(id)
       )
     );
-    // If selection is empty or all available fractions are new, select all
-    if (filtered.size === 0 || availableFractions.some((f) => !filtered.has(f.id))) {
+    if (filtered.size === 0) {
       setSelectedFractions(new Set(availableFractions.map((f) => f.id)));
     } else if (filtered.size !== selectedFractions.size) {
       setSelectedFractions(filtered);
@@ -88,15 +108,26 @@ export default function WasteCollectionCalendar({
         <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
           Abfuhrkalender
         </h1>
-        <div className="text-lg text-zinc-600 dark:text-zinc-400">
-          <span className="font-semibold">{data.street.name}</span>
-          <span className="mx-2">•</span>
-          <span>{data.location.name}</span>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="text-lg text-zinc-600 dark:text-zinc-400">
+            <span className="font-semibold">{data.street.name}</span>
+            <span className="mx-2">•</span>
+            <span>{data.location.name}</span>
+          </div>
+          <Link
+            href="/"
+            className="cursor-pointer rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            Andere Adresse suchen
+          </Link>
         </div>
         <p className="text-sm text-zinc-500 dark:text-zinc-500">
           {data.houseNumbers.length > 0
             ? `${data.houseNumbers.length} Hausnummer${data.houseNumbers.length !== 1 ? 'n' : ''} verfügbar`
             : 'Keine Hausnummern verfügbar'}
+        </p>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          Termine für die gewählte Adresse. Sie können die Adresse oben ändern.
         </p>
       </div>
 

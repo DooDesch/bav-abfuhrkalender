@@ -11,6 +11,5 @@ export const CACHE_TTL = parseInt(
 
 export const NEXT_REVALIDATE = 3600; // 1 hour in seconds
 
-// Wermelskirchen Configuration
-export const ORT_ID_WERMELSKIRCHEN = 2813240;
-export const STRASSE_NAME_ELBRINGHAUSEN = 'Elbringhausen';
+/** localStorage key for last selected address (location + street) */
+export const LAST_ADDRESS_STORAGE_KEY = 'bav-last-address';

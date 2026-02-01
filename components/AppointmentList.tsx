@@ -116,8 +116,9 @@ export default function AppointmentList({
       {/* Tabs */}
       <div className="flex gap-2 border-b border-zinc-200 dark:border-zinc-800">
         <button
+          type="button"
           onClick={() => setActiveTab('upcoming')}
-          className={`px-4 py-2 text-sm font-medium transition-colors ${
+          className={`cursor-pointer px-4 py-2 text-sm font-medium transition-colors ${
             activeTab === 'upcoming'
               ? 'border-b-2 border-zinc-900 text-zinc-900 dark:border-zinc-50 dark:text-zinc-50'
               : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50'
@@ -126,8 +127,9 @@ export default function AppointmentList({
           Zukünftige ({upcomingAppointments.length})
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('past')}
-          className={`px-4 py-2 text-sm font-medium transition-colors ${
+          className={`cursor-pointer px-4 py-2 text-sm font-medium transition-colors ${
             activeTab === 'past'
               ? 'border-b-2 border-zinc-900 text-zinc-900 dark:border-zinc-50 dark:text-zinc-50'
               : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50'

@@ -1,7 +1,4 @@
-import {
-  BAV_API_BASE_URL,
-  ORT_ID_WERMELSKIRCHEN,
-} from '@/lib/config/constants';
+import { BAV_API_BASE_URL } from '@/lib/config/constants';
 import type {
   Location,
   Street,
@@ -267,20 +264,11 @@ export class BAVApiService {
    * Get complete waste collection calendar data for a specific location and street
    */
   async getWasteCollectionData(
-    locationId: number,
+    locationName: string,
     streetName: string
   ): Promise<WasteCalendarResponse> {
-    // Get location
-    const location = await this.getLocationByName('Wermelskirchen');
-    if (location.id !== locationId) {
-      throw new BAVApiError(
-        `Location ID mismatch: expected ${locationId}, got ${location.id}`,
-        400
-      );
-    }
-
-    // Get street
-    const street = await this.getStreetByLocationAndName(locationId, streetName);
+    const location = await this.getLocationByName(locationName);
+    const street = await this.getStreetByLocationAndName(location.id, streetName);
 
     // House numbers come from the street object (API may provide hausNrList in streets response)
     const houseNumbers = street.houseNumbers ?? [];

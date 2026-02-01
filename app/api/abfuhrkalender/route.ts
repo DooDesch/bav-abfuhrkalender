@@ -1,50 +1,63 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { BAVApiService } from '@/lib/services/bav-api.service';
 import { cacheService } from '@/lib/services/cache.service';
-import {
-  ORT_ID_WERMELSKIRCHEN,
-  STRASSE_NAME_ELBRINGHAUSEN,
-  CACHE_TTL,
-} from '@/lib/config/constants';
+import { CACHE_TTL } from '@/lib/config/constants';
 import { handleApiError, createSuccessResponse } from '@/lib/utils/error-handler';
 import type { WasteCalendarResponse } from '@/lib/types/bav-api.types';
 
 // Force handler to run on every request so in-memory cache can be used
 export const dynamic = 'force-dynamic';
 
-const CACHE_KEY = 'waste-collection:elbringhausen';
+function buildCacheKey(location: string, street: string): string {
+  const normalizedLocation = location.trim().toLowerCase();
+  const normalizedStreet = street.trim().toLowerCase();
+  return `waste-collection:${normalizedLocation}:${normalizedStreet}`;
+}
+
+function getLocationAndStreet(request: NextRequest): { location: string; street: string } | null {
+  const { searchParams } = new URL(request.url);
+  const location = searchParams.get('location')?.trim();
+  const street = searchParams.get('street')?.trim();
+  if (!location || !street) return null;
+  return { location, street };
+}
 
 /**
- * GET /api/abfuhrkalender
- * Returns waste collection calendar data for Elbringhausen street in Wermelskirchen
+ * GET /api/abfuhrkalender?location=<Ort>&street=<Straße>
+ * Returns waste collection calendar data for the given location and street
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const params = getLocationAndStreet(request);
+    if (!params) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Query parameters "location" and "street" are required',
+          timestamp: new Date().toISOString(),
+        },
+        { status: 400 }
+      );
+    }
+
+    const { location, street } = params;
+    const cacheKey = buildCacheKey(location, street);
+
     // Check in-memory cache first
-    const cachedData = cacheService.get<WasteCalendarResponse>(CACHE_KEY);
-    // getTtl() returns absolute expiry timestamp in ms (or undefined if missing, 0 if no TTL)
-    const expiryTimestamp = cacheService.getTtl(CACHE_KEY);
+    const cachedData = cacheService.get<WasteCalendarResponse>(cacheKey);
+    const expiryTimestamp = cacheService.getTtl(cacheKey);
 
     if (cachedData && expiryTimestamp != null && expiryTimestamp > Date.now()) {
-      // Use absolute expiry timestamp from node-cache for correct cacheExpiresAt
       const cacheExpiresAt = new Date(expiryTimestamp).toISOString();
-
       return NextResponse.json(
         createSuccessResponse(cachedData, true, cacheExpiresAt)
       );
     }
 
-    // Fetch from BAV API
     const apiService = new BAVApiService();
-    const data = await apiService.getWasteCollectionData(
-      ORT_ID_WERMELSKIRCHEN,
-      STRASSE_NAME_ELBRINGHAUSEN
-    );
+    const data = await apiService.getWasteCollectionData(location, street);
 
-    // Store in cache
-    cacheService.set(CACHE_KEY, data);
-
-    // Calculate expiration time: CACHE_TTL is in seconds, convert to milliseconds
+    cacheService.set(cacheKey, data);
     const cacheExpiresAt = new Date(
       Date.now() + CACHE_TTL * 1000
     ).toISOString();
@@ -58,25 +71,32 @@ export async function GET() {
 }
 
 /**
- * POST /api/abfuhrkalender
- * Manually refresh the cache
+ * POST /api/abfuhrkalender?location=<Ort>&street=<Straße>
+ * Manually refresh the cache for the given location and street
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
-    // Clear cache
-    cacheService.delete(CACHE_KEY);
+    const params = getLocationAndStreet(request);
+    if (!params) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Query parameters "location" and "street" are required',
+          timestamp: new Date().toISOString(),
+        },
+        { status: 400 }
+      );
+    }
 
-    // Fetch fresh data
+    const { location, street } = params;
+    const cacheKey = buildCacheKey(location, street);
+
+    cacheService.delete(cacheKey);
+
     const apiService = new BAVApiService();
-    const data = await apiService.getWasteCollectionData(
-      ORT_ID_WERMELSKIRCHEN,
-      STRASSE_NAME_ELBRINGHAUSEN
-    );
+    const data = await apiService.getWasteCollectionData(location, street);
 
-    // Store in cache
-    cacheService.set(CACHE_KEY, data);
-
-    // Calculate expiration time: CACHE_TTL is in seconds, convert to milliseconds
+    cacheService.set(cacheKey, data);
     const cacheExpiresAt = new Date(
       Date.now() + CACHE_TTL * 1000
     ).toISOString();

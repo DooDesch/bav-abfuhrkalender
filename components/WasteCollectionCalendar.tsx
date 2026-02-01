@@ -115,11 +115,11 @@ export default function WasteCollectionCalendar({
             Andere Adresse suchen
           </Link>
         </div>
-        <p className="text-sm text-zinc-500 dark:text-zinc-500">
-          {data.houseNumbers.length > 0
-            ? `${data.houseNumbers.length} Hausnummer${data.houseNumbers.length !== 1 ? 'n' : ''} verfügbar`
-            : 'Keine Hausnummern verfügbar'}
-        </p>
+        {data.houseNumbers.length > 0 && (
+          <p className="text-sm text-zinc-500 dark:text-zinc-500">
+            {data.houseNumbers.length} Hausnummer{data.houseNumbers.length !== 1 ? 'n' : ''} verfügbar
+          </p>
+        )}
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
           Termine für die gewählte Adresse. Sie können die Adresse oben ändern.
         </p>

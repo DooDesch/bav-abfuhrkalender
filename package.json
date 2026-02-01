@@ -2,9 +2,12 @@
   "name": "bav-abfuhrkalender",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@9.0.0",
+  "packageManager": "pnpm@10.28.2",
   "pnpm": {
-    "neverBuiltDependencies": ["sharp", "unrs-resolver"]
+    "neverBuiltDependencies": [
+      "sharp",
+      "unrs-resolver"
+    ]
   },
   "scripts": {
     "dev": "next dev",

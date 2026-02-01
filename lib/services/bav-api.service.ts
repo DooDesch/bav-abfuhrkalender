@@ -3,12 +3,12 @@ import {
   ORT_ID_WERMELSKIRCHEN,
 } from '@/lib/config/constants';
 import type {
-  Ort,
-  Strasse,
-  Hausnummer,
-  Fraktion,
-  Termin,
-  AbfuhrkalenderResponse,
+  Location,
+  Street,
+  HouseNumber,
+  Fraction,
+  Appointment,
+  WasteCalendarResponse,
 } from '@/lib/types/bav-api.types';
 import { BAVApiError } from '@/lib/types/bav-api.types';
 
@@ -20,9 +20,9 @@ export class BAVApiService {
   }
 
   /**
-   * Get all available locations (Orte)
+   * Get all available locations
    */
-  async getLocations(): Promise<Ort[]> {
+  async getLocations(): Promise<Location[]> {
     try {
       const response = await fetch(`${this.baseUrl}/orte`, {
         next: { revalidate: 3600 }, // Cache for 1 hour
@@ -30,7 +30,7 @@ export class BAVApiService {
 
       if (!response.ok) {
         throw new BAVApiError(
-          `Failed to fetch Orte: ${response.statusText}`,
+          `Failed to fetch locations: ${response.statusText}`,
           response.status
         );
       }
@@ -41,7 +41,7 @@ export class BAVApiService {
         throw error;
       }
       throw new BAVApiError(
-        `Error fetching Orte: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Error fetching locations: ${error instanceof Error ? error.message : 'Unknown error'}`,
         500,
         error
       );
@@ -51,7 +51,7 @@ export class BAVApiService {
   /**
    * Find a location by name (case-insensitive)
    */
-  async getLocationByName(name: string): Promise<Ort> {
+  async getLocationByName(name: string): Promise<Location> {
     const locations = await this.getLocations();
     const location = locations.find(
       (o) => o.name.toLowerCase() === name.toLowerCase()
@@ -67,7 +67,7 @@ export class BAVApiService {
   /**
    * Get all streets for a specific location
    */
-  async getStreets(locationId: number): Promise<Strasse[]> {
+  async getStreets(locationId: number): Promise<Street[]> {
     try {
       // Use the correct endpoint format: /orte/{locationId}/strassen
       const url = `${this.baseUrl}/orte/${locationId}/strassen`;
@@ -95,12 +95,23 @@ export class BAVApiService {
         );
       }
 
-      // Map the response to our Strasse type (API returns more fields)
-      return data.map((item: any) => ({
-        id: item.id,
-        name: item.name,
-        ortId: item.ort?.id || locationId,
-      }));
+      // Map the response to our Street type (API returns more fields, e.g. hausNrList)
+      return data.map((item: any) => {
+        const rawHouseList = item.hausNrList ?? item.hausnummern ?? item.hausnummernList ?? [];
+        const houseNumbers: HouseNumber[] = Array.isArray(rawHouseList)
+          ? rawHouseList.map((entry: any, index: number) => ({
+              id: entry.id ?? index,
+              name: String(entry.name ?? entry.nummer ?? entry.hausnummer ?? entry.value ?? entry.id ?? ''),
+              streetId: item.id,
+            }))
+          : [];
+        return {
+          id: item.id,
+          name: item.name,
+          locationId: item.ort?.id || locationId,
+          houseNumbers: houseNumbers.length > 0 ? houseNumbers : undefined,
+        };
+      });
     } catch (error) {
       if (error instanceof BAVApiError) {
         throw error;
@@ -119,7 +130,7 @@ export class BAVApiService {
   async getStreetByLocationAndName(
     locationId: number,
     streetName: string
-  ): Promise<Strasse> {
+  ): Promise<Street> {
     const streets = await this.getStreets(locationId);
     const street = streets.find(
       (s) => s.name.toLowerCase() === streetName.toLowerCase()
@@ -144,7 +155,7 @@ export class BAVApiService {
    */
   async getHouseNumbersByStreet(
     streetId: number
-  ): Promise<Hausnummer[]> {
+  ): Promise<HouseNumber[]> {
     // The API doesn't provide house numbers separately
     // Collection dates can be fetched directly by streetId
     // Return empty array for now
@@ -154,7 +165,7 @@ export class BAVApiService {
   /**
    * Get all waste fractions
    */
-  async getFractions(): Promise<Fraktion[]> {
+  async getFractions(): Promise<Fraction[]> {
     try {
       const response = await fetch(`${this.baseUrl}/fraktionen`, {
         next: { revalidate: 3600 }, // Cache for 1 hour
@@ -180,7 +191,7 @@ export class BAVApiService {
         );
       }
 
-      // Map the API response to our Fraktion type
+      // Map the API response to our Fraction type
       // API uses farbeRgb (hex without #), we convert to color with #
       return data.map((item: any) => ({
         id: item.id,
@@ -206,7 +217,7 @@ export class BAVApiService {
   async getCollectionDates(
     streetId: number,
     houseNumberId?: number
-  ): Promise<Termin[]> {
+  ): Promise<Appointment[]> {
     try {
       // Use the correct endpoint format: /strassen/{streetId}/termine
       const url = `${this.baseUrl}/strassen/${streetId}/termine`;
@@ -234,11 +245,11 @@ export class BAVApiService {
         );
       }
 
-      // Map the API response to our Termin type
+      // Map the API response to our Appointment type
       return data.map((item: any) => ({
-        datum: item.datum,
-        fraktion: '', // Will be filled from fractions
-        fraktionId: item.bezirk?.fraktionId || 0,
+        date: item.datum,
+        fractionName: '', // Will be filled from fractions
+        fractionId: item.bezirk?.fraktionId || 0,
       }));
     } catch (error) {
       if (error instanceof BAVApiError) {
@@ -258,7 +269,7 @@ export class BAVApiService {
   async getWasteCollectionData(
     locationId: number,
     streetName: string
-  ): Promise<AbfuhrkalenderResponse> {
+  ): Promise<WasteCalendarResponse> {
     // Get location
     const location = await this.getLocationByName('Wermelskirchen');
     if (location.id !== locationId) {
@@ -271,9 +282,11 @@ export class BAVApiService {
     // Get street
     const street = await this.getStreetByLocationAndName(locationId, streetName);
 
-    // Get all related data in parallel
-    const [houseNumbers, fractions, collectionDates] = await Promise.all([
-      this.getHouseNumbersByStreet(street.id),
+    // House numbers come from the street object (API may provide hausNrList in streets response)
+    const houseNumbers = street.houseNumbers ?? [];
+
+    // Get fractions and collection dates in parallel
+    const [fractions, collectionDates] = await Promise.all([
       this.getFractions(),
       this.getCollectionDates(street.id),
     ]);
@@ -284,15 +297,15 @@ export class BAVApiService {
     );
     const appointmentsWithFraction = collectionDates.map((t) => ({
       ...t,
-      fraktion: fractionsMap.get(t.fraktionId) || 'Unknown',
+      fractionName: fractionsMap.get(t.fractionId) || 'Unknown',
     }));
 
     return {
-      ort: location,
-      strasse: street,
-      hausnummern: houseNumbers,
-      fraktionen: fractions,
-      termine: appointmentsWithFraction,
+      location,
+      street,
+      houseNumbers,
+      fractions,
+      appointments: appointmentsWithFraction,
     };
   }
 }

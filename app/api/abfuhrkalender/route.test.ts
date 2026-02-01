@@ -1,22 +1,22 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { cacheService } from '@/lib/services/cache.service';
-import type { AbfuhrkalenderResponse } from '@/lib/types/bav-api.types';
+import type { WasteCalendarResponse } from '@/lib/types/bav-api.types';
 
-const mockAbfuhrkalenderData: AbfuhrkalenderResponse = {
-  ort: { id: 2813240, name: 'Wermelskirchen' },
-  strasse: { id: 1, name: 'Elbringhausen' },
-  hausnummern: [],
-  fraktionen: [],
-  termine: [],
+const mockWasteCalendarData: WasteCalendarResponse = {
+  location: { id: 2813240, name: 'Wermelskirchen' },
+  street: { id: 1, name: 'Elbringhausen' },
+  houseNumbers: [],
+  fractions: [],
+  appointments: [],
 };
 
 vi.mock('@/lib/services/bav-api.service', () => {
-  const mockData: AbfuhrkalenderResponse = {
-    ort: { id: 2813240, name: 'Wermelskirchen' },
-    strasse: { id: 1, name: 'Elbringhausen' },
-    hausnummern: [],
-    fraktionen: [],
-    termine: [],
+  const mockData: WasteCalendarResponse = {
+    location: { id: 2813240, name: 'Wermelskirchen' },
+    street: { id: 1, name: 'Elbringhausen' },
+    houseNumbers: [],
+    fractions: [],
+    appointments: [],
   };
   return {
     BAVApiService: class MockBAVApiService {
@@ -38,7 +38,7 @@ describe('GET /api/abfuhrkalender', () => {
     expect(response.ok).toBe(true);
     expect(json.success).toBe(true);
     expect(json.cached).toBe(false);
-    expect(json.data).toEqual(mockAbfuhrkalenderData);
+    expect(json.data).toEqual(mockWasteCalendarData);
     expect(json.cacheExpiresAt).toBeDefined();
   });
 
@@ -51,7 +51,7 @@ describe('GET /api/abfuhrkalender', () => {
     expect(response.ok).toBe(true);
     expect(json.success).toBe(true);
     expect(json.cached).toBe(true);
-    expect(json.data).toEqual(mockAbfuhrkalenderData);
+    expect(json.data).toEqual(mockWasteCalendarData);
     expect(json.cacheExpiresAt).toBeDefined();
     const expiresAt = new Date(json.cacheExpiresAt).getTime();
     expect(expiresAt).toBeGreaterThan(Date.now());

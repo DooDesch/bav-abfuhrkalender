@@ -5,13 +5,13 @@ import {
   ORT_ID_WERMELSKIRCHEN,
   STRASSE_NAME_ELBRINGHAUSEN,
 } from '@/lib/config/constants';
-import type { AbfuhrkalenderResponse } from '@/lib/types/bav-api.types';
+import type { WasteCalendarResponse } from '@/lib/types/bav-api.types';
 
 const CACHE_KEY = 'waste-collection:elbringhausen';
 
-async function getWasteCollectionData(): Promise<AbfuhrkalenderResponse> {
+async function getWasteCollectionData(): Promise<WasteCalendarResponse> {
   // Check in-memory cache first
-  const cachedData = cacheService.get<AbfuhrkalenderResponse>(CACHE_KEY);
+  const cachedData = cacheService.get<WasteCalendarResponse>(CACHE_KEY);
 
   if (cachedData) {
     return cachedData;
@@ -31,7 +31,7 @@ async function getWasteCollectionData(): Promise<AbfuhrkalenderResponse> {
 }
 
 export default async function Home() {
-  let data: AbfuhrkalenderResponse | null = null;
+  let data: WasteCalendarResponse | null = null;
   let error: string | null = null;
 
   try {

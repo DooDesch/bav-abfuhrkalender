@@ -1,9 +1,9 @@
 'use client';
 
-import type { Fraktion } from '@/lib/types/bav-api.types';
+import type { Fraction } from '@/lib/types/bav-api.types';
 
 interface FractionBadgeProps {
-  fraction: Fraktion;
+  fraction: Fraction;
   className?: string;
 }
 

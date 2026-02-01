@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import type { Termin, Fraktion } from '@/lib/types/bav-api.types';
+import type { Appointment, Fraction } from '@/lib/types/bav-api.types';
 import FractionBadge from './FractionBadge';
 
 interface AppointmentListProps {
-  appointments: Termin[];
-  fractions: Fraktion[];
+  appointments: Appointment[];
+  fractions: Fraction[];
   selectedFractions?: Set<number>;
 }
 
@@ -17,7 +17,7 @@ export default function AppointmentList({
 }: AppointmentListProps) {
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
 
-  const findFraction = (fractionId: number): Fraktion | undefined => {
+  const findFraction = (fractionId: number): Fraction | undefined => {
     return fractions.find((f) => f.id === fractionId);
   };
 
@@ -35,36 +35,36 @@ export default function AppointmentList({
   now.setHours(0, 0, 0, 0);
 
   const filteredAppointments = selectedFractions
-    ? appointments.filter((t) => selectedFractions.has(t.fraktionId))
+    ? appointments.filter((t) => selectedFractions.has(t.fractionId))
     : appointments;
 
   // Split into upcoming and past appointments
   const upcomingAppointments = filteredAppointments.filter((t) => {
-    const appointmentDate = new Date(t.datum);
+    const appointmentDate = new Date(t.date);
     appointmentDate.setHours(0, 0, 0, 0);
     return appointmentDate >= now;
   });
 
   const pastAppointments = filteredAppointments.filter((t) => {
-    const appointmentDate = new Date(t.datum);
+    const appointmentDate = new Date(t.date);
     appointmentDate.setHours(0, 0, 0, 0);
     return appointmentDate < now;
   });
 
-  const groupByDate = (appts: Termin[]) => {
+  const groupByDate = (appts: Appointment[]) => {
     return appts.reduce(
-      (acc, termin) => {
-        if (!acc[termin.datum]) {
-          acc[termin.datum] = [];
+      (acc, appointment) => {
+        if (!acc[appointment.date]) {
+          acc[appointment.date] = [];
         }
-        acc[termin.datum].push(termin);
+        acc[appointment.date].push(appointment);
         return acc;
       },
-      {} as Record<string, Termin[]>
+      {} as Record<string, Appointment[]>
     );
   };
 
-  const renderAppointments = (appts: Termin[], sortDesc: boolean = false) => {
+  const renderAppointments = (appts: Appointment[], sortDesc: boolean = false) => {
     const groupedByDate = groupByDate(appts);
     const sortedDates = Object.keys(groupedByDate).sort((a, b) =>
       sortDesc ? b.localeCompare(a) : a.localeCompare(b)
@@ -83,8 +83,8 @@ export default function AppointmentList({
         {sortedDates.map((date) => {
           const appointmentsForDate = groupedByDate[date];
           const fractionsForDate = appointmentsForDate
-            .map((t) => findFraction(t.fraktionId))
-            .filter((f): f is Fraktion => f !== undefined);
+            .map((t) => findFraction(t.fractionId))
+            .filter((f): f is Fraction => f !== undefined);
 
           return (
             <div
@@ -99,8 +99,8 @@ export default function AppointmentList({
                   {formatDate(date)}
                 </time>
                 <div className="flex flex-wrap gap-2">
-                  {fractionsForDate.map((fraktion) => (
-                    <FractionBadge key={fraktion.id} fraction={fraktion} />
+                  {fractionsForDate.map((fraction) => (
+                    <FractionBadge key={fraction.id} fraction={fraction} />
                   ))}
                 </div>
               </div>

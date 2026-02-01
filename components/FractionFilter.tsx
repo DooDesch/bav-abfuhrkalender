@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import type { Fraktion } from '@/lib/types/bav-api.types';
+import type { Fraction } from '@/lib/types/bav-api.types';
 
 interface FractionFilterProps {
-  fractions: Fraktion[];
+  fractions: Fraction[];
   selectedFractions: Set<number>;
   onFilterChange: (selected: Set<number>) => void;
 }

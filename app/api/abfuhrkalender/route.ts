@@ -7,7 +7,7 @@ import {
   CACHE_TTL,
 } from '@/lib/config/constants';
 import { handleApiError, createSuccessResponse } from '@/lib/utils/error-handler';
-import type { AbfuhrkalenderResponse } from '@/lib/types/bav-api.types';
+import type { WasteCalendarResponse } from '@/lib/types/bav-api.types';
 
 // Force handler to run on every request so in-memory cache can be used
 export const dynamic = 'force-dynamic';
@@ -21,7 +21,7 @@ const CACHE_KEY = 'waste-collection:elbringhausen';
 export async function GET() {
   try {
     // Check in-memory cache first
-    const cachedData = cacheService.get<AbfuhrkalenderResponse>(CACHE_KEY);
+    const cachedData = cacheService.get<WasteCalendarResponse>(CACHE_KEY);
     // getTtl() returns absolute expiry timestamp in ms (or undefined if missing, 0 if no TTL)
     const expiryTimestamp = cacheService.getTtl(CACHE_KEY);
 

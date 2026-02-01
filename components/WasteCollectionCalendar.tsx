@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { AbfuhrkalenderResponse } from '@/lib/types/bav-api.types';
+import type { WasteCalendarResponse } from '@/lib/types/bav-api.types';
 import AppointmentList from './AppointmentList';
 import FractionFilter from './FractionFilter';
 
 interface WasteCollectionCalendarProps {
-  data: AbfuhrkalenderResponse;
+  data: WasteCalendarResponse;
 }
 
 const STORAGE_KEY = 'bav-waste-collection-filter';
@@ -16,9 +16,9 @@ export default function WasteCollectionCalendar({
 }: WasteCollectionCalendarProps) {
   // Get fractions that actually appear in appointments
   const availableFractionIds = new Set(
-    data.termine.map((t) => t.fraktionId)
+    data.appointments.map((t) => t.fractionId)
   );
-  const availableFractions = data.fraktionen.filter((f) =>
+  const availableFractions = data.fractions.filter((f) =>
     availableFractionIds.has(f.id)
   );
 
@@ -89,13 +89,13 @@ export default function WasteCollectionCalendar({
           Abfuhrkalender
         </h1>
         <div className="text-lg text-zinc-600 dark:text-zinc-400">
-          <span className="font-semibold">{data.strasse.name}</span>
+          <span className="font-semibold">{data.street.name}</span>
           <span className="mx-2">•</span>
-          <span>{data.ort.name}</span>
+          <span>{data.location.name}</span>
         </div>
         <p className="text-sm text-zinc-500 dark:text-zinc-500">
-          {data.hausnummern.length > 0
-            ? `${data.hausnummern.length} Hausnummer${data.hausnummern.length !== 1 ? 'n' : ''} verfügbar`
+          {data.houseNumbers.length > 0
+            ? `${data.houseNumbers.length} Hausnummer${data.houseNumbers.length !== 1 ? 'n' : ''} verfügbar`
             : 'Keine Hausnummern verfügbar'}
         </p>
       </div>
@@ -113,8 +113,8 @@ export default function WasteCollectionCalendar({
           />
         </div>
         <AppointmentList
-          appointments={data.termine}
-          fractions={data.fraktionen}
+          appointments={data.appointments}
+          fractions={data.fractions}
           selectedFractions={selectedFractions}
         />
       </div>
@@ -124,14 +124,14 @@ export default function WasteCollectionCalendar({
         <h3 className="mb-2 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
           Verfügbare Abfallsorten
         </h3>
-        {data.fraktionen.length > 0 ? (
+        {data.fractions.length > 0 ? (
           <div className="flex flex-wrap gap-2">
-            {data.fraktionen.map((fraktion) => (
+            {data.fractions.map((fraction) => (
               <span
-                key={fraktion.id}
+                key={fraction.id}
                 className="text-xs text-zinc-600 dark:text-zinc-400"
               >
-                {fraktion.name}
+                {fraction.name}
               </span>
             ))}
           </div>

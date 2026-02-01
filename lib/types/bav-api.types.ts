@@ -1,41 +1,43 @@
-// BAV API Type Definitions
+// BAV API Type Definitions (English)
 
-export interface Ort {
+export interface Location {
   id: number;
   name: string;
 }
 
-export interface Strasse {
+export interface Street {
   id: number;
   name: string;
-  ortId?: number;
+  locationId?: number;
+  /** House numbers from API (e.g. hausNrList), when provided */
+  houseNumbers?: HouseNumber[];
 }
 
-export interface Hausnummer {
+export interface HouseNumber {
   id: number;
   name: string;
-  strasseId?: number;
+  streetId?: number;
 }
 
-export interface Fraktion {
+export interface Fraction {
   id: number;
   name: string;
   color?: string;
   icon?: string;
 }
 
-export interface Termin {
-  datum: string; // ISO date string (YYYY-MM-DD)
-  fraktion: string;
-  fraktionId: number;
+export interface Appointment {
+  date: string; // ISO date string (YYYY-MM-DD)
+  fractionName: string;
+  fractionId: number;
 }
 
-export interface AbfuhrkalenderResponse {
-  ort: Ort;
-  strasse: Strasse;
-  hausnummern: Hausnummer[];
-  fraktionen: Fraktion[];
-  termine: Termin[];
+export interface WasteCalendarResponse {
+  location: Location;
+  street: Street;
+  houseNumbers: HouseNumber[];
+  fractions: Fraction[];
+  appointments: Appointment[];
 }
 
 export interface ApiResponse<T> {

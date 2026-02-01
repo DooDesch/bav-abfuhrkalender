@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useState, useEffect, useMemo } from 'react';
 import type { WasteCalendarResponse } from '@/lib/types/bav-api.types';
-import { LAST_ADDRESS_STORAGE_KEY } from '@/lib/config/constants';
+import { FRACTION_FILTER_STORAGE_KEY } from '@/lib/config/constants';
+import { useAddressStore } from '@/lib/stores/address.store';
 import AppointmentList from './AppointmentList';
 import FractionFilter from './FractionFilter';
 
@@ -13,27 +14,20 @@ interface WasteCollectionCalendarProps {
   street?: string;
 }
 
-const STORAGE_KEY = 'bav-waste-collection-filter';
-
 export default function WasteCollectionCalendar({
   data,
   location: locationProp,
   street: streetProp,
 }: WasteCollectionCalendarProps) {
+  const setLastAddress = useAddressStore((s) => s.setLastAddress);
+
   // Save current address as last used when calendar is displayed (e.g. direct link or back)
   useEffect(() => {
     const loc = locationProp?.trim();
     const str = streetProp?.trim();
-    if (!loc || !str || typeof window === 'undefined') return;
-    try {
-      localStorage.setItem(
-        LAST_ADDRESS_STORAGE_KEY,
-        JSON.stringify({ location: loc, street: str })
-      );
-    } catch {
-      // Ignore storage errors
-    }
-  }, [locationProp, streetProp]);
+    if (!loc || !str) return;
+    setLastAddress(loc, str);
+  }, [locationProp, streetProp, setLastAddress]);
   // Get fractions that actually appear in appointments (stable refs for effect deps)
   const availableFractionIds = useMemo(
     () => new Set(data.appointments.map((t) => t.fractionId)),
@@ -50,7 +44,7 @@ export default function WasteCollectionCalendar({
       // Try to load from localStorage
       if (typeof window !== 'undefined') {
         try {
-          const saved = localStorage.getItem(STORAGE_KEY);
+          const saved = localStorage.getItem(FRACTION_FILTER_STORAGE_KEY);
           if (saved) {
             const parsed = JSON.parse(saved) as number[];
             const savedSet = new Set(parsed);
@@ -77,7 +71,7 @@ export default function WasteCollectionCalendar({
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(
-          STORAGE_KEY,
+          FRACTION_FILTER_STORAGE_KEY,
           JSON.stringify(Array.from(selectedFractions))
         );
       } catch (e) {

@@ -1,8 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useCallback, useState, useEffect } from 'react';
-import { LAST_ADDRESS_STORAGE_KEY } from '@/lib/config/constants';
+import { useCallback, useEffect } from 'react';
+import { useAddressStore } from '@/lib/stores/address.store';
 import LocationAutocomplete from '@/components/LocationAutocomplete';
 import StreetAutocomplete from '@/components/StreetAutocomplete';
 
@@ -16,39 +16,29 @@ export default function AddressSearchForm({
   defaultStreet = '',
 }: AddressSearchFormProps) {
   const router = useRouter();
-  const [location, setLocation] = useState(defaultLocation);
-  const [street, setStreet] = useState(defaultStreet);
+  const location = useAddressStore((s) => s.location);
+  const street = useAddressStore((s) => s.street);
+  const setLocation = useAddressStore((s) => s.setLocation);
+  const setStreet = useAddressStore((s) => s.setStreet);
+  const setAddress = useAddressStore((s) => s.setAddress);
+  const getLastAddress = useAddressStore((s) => s.getLastAddress);
+  const setLastAddress = useAddressStore((s) => s.setLastAddress);
 
-  // Load last address from localStorage when no defaults (e.g. "Andere Adresse")
-  useEffect(() => {
-    if (defaultLocation !== '' || defaultStreet !== '') return;
-    if (typeof window === 'undefined') return;
-    try {
-      const raw = localStorage.getItem(LAST_ADDRESS_STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as { location?: string; street?: string };
-      const loc = parsed?.location?.trim();
-      const str = parsed?.street?.trim();
-      if (loc && str) {
-        setLocation(loc);
-        setStreet(str);
-      }
-    } catch {
-      // Ignore parse/storage errors
-    }
-  }, [defaultLocation, defaultStreet]);
-
-  // Sync default values when they change (e.g. from URL or error page). Skip when both empty so localStorage-loaded values are not overwritten (e.g. after navigating from Playground to Kalender).
+  // Hydrate store from URL when defaults are set; otherwise from last address (e.g. "Andere Adresse")
   useEffect(() => {
     if (defaultLocation !== '' || defaultStreet !== '') {
-      setLocation(defaultLocation);
-      setStreet(defaultStreet);
+      setAddress(defaultLocation, defaultStreet);
+    } else {
+      const last = getLastAddress();
+      if (last.location || last.street) {
+        setAddress(last.location, last.street);
+      }
     }
-  }, [defaultLocation, defaultStreet]);
+  }, [defaultLocation, defaultStreet, setAddress, getLastAddress]);
 
   const handleLocationSelect = useCallback(() => {
     setStreet('');
-  }, []);
+  }, [setStreet]);
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -56,26 +46,14 @@ export default function AddressSearchForm({
       const trimmedLocation = location.trim();
       const trimmedStreet = street.trim();
       if (!trimmedLocation || !trimmedStreet) return;
-      try {
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(
-            LAST_ADDRESS_STORAGE_KEY,
-            JSON.stringify({
-              location: trimmedLocation,
-              street: trimmedStreet,
-            })
-          );
-        }
-      } catch {
-        // Ignore storage errors
-      }
+      setLastAddress(trimmedLocation, trimmedStreet);
       const params = new URLSearchParams({
         location: trimmedLocation,
         street: trimmedStreet,
       });
       router.push(`/?${params.toString()}`);
     },
-    [location, street, router]
+    [location, street, setLastAddress, router]
   );
 
   return (

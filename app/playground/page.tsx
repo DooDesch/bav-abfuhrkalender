@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAddressStore } from '@/lib/stores/address.store';
 import LocationAutocomplete from '@/components/LocationAutocomplete';
 import StreetAutocomplete from '@/components/StreetAutocomplete';
 
@@ -14,8 +15,23 @@ interface ApiResponse {
 }
 
 export default function PlaygroundPage() {
-  const [location, setLocation] = useState('');
-  const [street, setStreet] = useState('');
+  const location = useAddressStore((s) => s.location);
+  const street = useAddressStore((s) => s.street);
+  const setLocation = useAddressStore((s) => s.setLocation);
+  const setStreet = useAddressStore((s) => s.setStreet);
+  const setLastAddress = useAddressStore((s) => s.setLastAddress);
+  const getLastAddress = useAddressStore((s) => s.getLastAddress);
+  const setAddress = useAddressStore((s) => s.setAddress);
+
+  // Hydrate store from last address when Playground mounts with empty store
+  useEffect(() => {
+    if (location !== '' || street !== '') return;
+    const last = getLastAddress();
+    if (last.location || last.street) {
+      setAddress(last.location, last.street);
+    }
+  }, [getLastAddress, setAddress]);
+
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<ApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -23,12 +39,15 @@ export default function PlaygroundPage() {
   const canSend = location.trim() !== '' && street.trim() !== '';
 
   const handleGet = async () => {
+    const trimmedLocation = location.trim();
+    const trimmedStreet = street.trim();
+    setLastAddress(trimmedLocation, trimmedStreet);
     setLoading(true);
     setError(null);
     setResponse(null);
 
     try {
-      const url = `/api/abfuhrkalender?location=${encodeURIComponent(location.trim())}&street=${encodeURIComponent(street.trim())}`;
+      const url = `/api/abfuhrkalender?location=${encodeURIComponent(trimmedLocation)}&street=${encodeURIComponent(trimmedStreet)}`;
       const res = await fetch(url);
       const data = await res.json();
       setResponse(data);
@@ -42,12 +61,15 @@ export default function PlaygroundPage() {
   };
 
   const handlePost = async () => {
+    const trimmedLocation = location.trim();
+    const trimmedStreet = street.trim();
+    setLastAddress(trimmedLocation, trimmedStreet);
     setLoading(true);
     setError(null);
     setResponse(null);
 
     try {
-      const url = `/api/abfuhrkalender?location=${encodeURIComponent(location.trim())}&street=${encodeURIComponent(street.trim())}`;
+      const url = `/api/abfuhrkalender?location=${encodeURIComponent(trimmedLocation)}&street=${encodeURIComponent(trimmedStreet)}`;
       const res = await fetch(url, { method: 'POST' });
       const data = await res.json();
       setResponse(data);

@@ -151,7 +151,7 @@ export default function Autocomplete<TOption extends AutocompleteOption = Autoco
       {open && !disabled && (
         <ul id={listId} role="listbox" className={dropdownClassName}>
           {filtered.length === 0 ? (
-            <li className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400">
+            <li className="flex min-h-[44px] items-center px-3 py-3 text-sm text-zinc-500 dark:text-zinc-400">
               {loading ? 'Lade…' : emptyMessage}
             </li>
           ) : (
@@ -163,7 +163,7 @@ export default function Autocomplete<TOption extends AutocompleteOption = Autoco
                   role="option"
                   aria-selected={value === labelText}
                   tabIndex={-1}
-                  className="cursor-pointer px-3 py-2 text-sm text-zinc-900 hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                  className="flex min-h-[44px] cursor-pointer items-center px-3 py-3 text-sm text-zinc-900 hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-zinc-800"
                   onMouseDown={(e) => {
                     e.preventDefault();
                     handleSelect(labelText);

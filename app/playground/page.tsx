@@ -84,7 +84,7 @@ export default function PlaygroundPage() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-8">
+    <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-8">
       <div>
         <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
           API Playground

@@ -99,18 +99,18 @@ export default function WasteCollectionCalendar({
     <div className="w-full space-y-6">
       {/* Header */}
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 sm:text-3xl">
           Abfuhrkalender
         </h1>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="text-lg text-zinc-600 dark:text-zinc-400">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+          <div className="text-base text-zinc-600 dark:text-zinc-400 sm:text-lg">
             <span className="font-semibold">{data.street.name}</span>
             <span className="mx-2">•</span>
             <span>{data.location.name}</span>
           </div>
           <Link
             href="/?form=1"
-            className="cursor-pointer rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            className="flex min-h-[44px] cursor-pointer items-center self-start rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
             Andere Adresse suchen
           </Link>
@@ -127,15 +127,17 @@ export default function WasteCollectionCalendar({
 
       {/* Appointments */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
             Abfuhrtermine
           </h2>
-          <FractionFilter
-            fractions={availableFractions}
-            selectedFractions={selectedFractions}
-            onFilterChange={setSelectedFractions}
-          />
+          <div className="w-full sm:w-auto">
+            <FractionFilter
+              fractions={availableFractions}
+              selectedFractions={selectedFractions}
+              onFilterChange={setSelectedFractions}
+            />
+          </div>
         </div>
         <AppointmentList
           appointments={data.appointments}

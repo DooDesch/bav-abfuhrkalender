@@ -61,7 +61,7 @@ export default async function Home({
 
   return (
     <div className="min-h-screen bg-zinc-50 font-sans dark:bg-black">
-      <main className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-4xl flex-col items-center justify-center py-16 px-8 sm:px-16">
+      <main className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-4xl flex-col items-center justify-center px-4 py-8 sm:px-8 sm:py-12 lg:px-16 lg:py-16">
         {!hasParams ? (
           <HomeWithoutParams />
         ) : error ? (

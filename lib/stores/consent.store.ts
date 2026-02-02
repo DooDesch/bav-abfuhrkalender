@@ -143,6 +143,14 @@ export const useConsentStore = create<ConsentState>()(
         consentTimestamp: state.consentTimestamp,
         categories: state.categories,
       }),
+      // After rehydration, set showBanner based on hasConsented
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          // If user has already consented, don't show banner
+          // If user hasn't consented yet, show banner
+          state.showBanner = !state.hasConsented;
+        }
+      },
     }
   )
 );

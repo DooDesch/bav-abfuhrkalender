@@ -84,7 +84,7 @@ export default function Navigation() {
               <Logo size={36} animate />
               <span className="text-lg tracking-tight text-zinc-900 dark:text-zinc-50">
                 <span className="font-bold">Dein</span>
-                <span className="hidden sm:inline text-zinc-500 dark:text-zinc-400 font-normal ml-1">
+                <span className="text-zinc-500 dark:text-zinc-400 font-normal ml-1">
                   Abfuhrkalender
                 </span>
               </span>

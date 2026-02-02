@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navigation from "@/components/Navigation";
 import BottomNav from "@/components/layout/BottomNav";
+import Footer from "@/components/layout/Footer";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -123,6 +124,7 @@ export default function RootLayout({
           <ErrorBoundary>
             {children}
           </ErrorBoundary>
+          <Footer />
           <Suspense fallback={null}>
             <BottomNav />
           </Suspense>

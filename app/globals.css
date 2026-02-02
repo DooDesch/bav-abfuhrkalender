@@ -160,6 +160,19 @@ body {
   max-width: 100vw;
 }
 
+/* Interactive elements cursor */
+button,
+[role="button"],
+[type="button"],
+[type="submit"],
+[type="reset"],
+a[href],
+select,
+label[for],
+[tabindex]:not([tabindex="-1"]) {
+  cursor: pointer;
+}
+
 /* ============================================
    GLASSMORPHISM UTILITIES
    ============================================ */

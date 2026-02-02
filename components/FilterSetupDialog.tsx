@@ -25,6 +25,8 @@ interface FilterSetupDialogProps {
   onFilterChange: (selected: Set<number>) => void;
   /** Callback when user confirms their selection */
   onConfirm: () => void;
+  /** Callback when user closes the dialog without confirming */
+  onClose?: () => void;
 }
 
 /**
@@ -37,6 +39,7 @@ export default function FilterSetupDialog({
   selectedFractions,
   onFilterChange,
   onConfirm,
+  onClose,
 }: FilterSetupDialogProps) {
   const toggleFraction = (fractionId: number) => {
     const newSelected = new Set(selectedFractions);
@@ -59,7 +62,7 @@ export default function FilterSetupDialog({
   const hasSelection = selectedFractions.size > 0;
 
   return (
-    <Dialog open={open}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose?.()}>
       <DialogContent className="sm:max-w-md" aria-describedby="filter-setup-description">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">

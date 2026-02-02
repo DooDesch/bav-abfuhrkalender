@@ -505,6 +505,7 @@ export default function WasteCollectionCalendar({
         selectedFractions={selectedFractions}
         onFilterChange={setSelectedFractions}
         onConfirm={markAsConfigured}
+        onClose={markAsConfigured}
       />
     </motion.div>
   );

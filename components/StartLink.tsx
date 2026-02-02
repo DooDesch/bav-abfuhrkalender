@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useAddressStore } from '@/lib/stores/address.store';
 import { Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -15,7 +14,6 @@ interface StartLinkProps {
 
 /**
  * Client component for navigating to the home page.
- * Sets wantsNewAddress flag to prevent automatic redirect to last calendar.
  */
 export default function StartLink({
   className,
@@ -23,12 +21,10 @@ export default function StartLink({
   children,
   unstyled = false,
 }: StartLinkProps) {
-  const setWantsNewAddress = useAddressStore((s) => s.setWantsNewAddress);
-
   // When unstyled, render just the link wrapper
   if (unstyled) {
     return (
-      <Link href="/" onClick={() => setWantsNewAddress(true)} className={className}>
+      <Link href="/" className={className}>
         {children}
       </Link>
     );
@@ -37,7 +33,6 @@ export default function StartLink({
   return (
     <Link
       href="/"
-      onClick={() => setWantsNewAddress(true)}
       className={cn(
         'hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors flex items-center gap-1',
         className

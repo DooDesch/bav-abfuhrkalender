@@ -214,7 +214,6 @@ export default function WasteCollectionCalendar({
   street: streetProp,
 }: WasteCollectionCalendarProps) {
   const setLastAddress = useAddressStore((s) => s.setLastAddress);
-  const setWantsNewAddress = useAddressStore((s) => s.setWantsNewAddress);
 
   // Save current address as last used when calendar is displayed
   useEffect(() => {
@@ -307,7 +306,7 @@ export default function WasteCollectionCalendar({
               <span className="text-zinc-500 dark:text-zinc-400"> • {data.location.name}</span>
             </div>
           </div>
-          <Link href="/" onClick={() => setWantsNewAddress(true)}>
+          <Link href="/">
             <Button variant="outline" size="sm" className="gap-2 w-full sm:w-auto">
               <ArrowLeft className="h-4 w-4" />
               <span className="sm:inline">Andere Adresse</span>

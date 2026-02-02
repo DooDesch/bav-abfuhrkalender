@@ -17,8 +17,6 @@ let hasAnimatedOnce = false;
 export default function Navigation() {
   const pathname = usePathname();
   const getLastAddress = useAddressStore((s) => s.getLastAddress);
-  const wantsNewAddress = useAddressStore((s) => s.wantsNewAddress);
-  const setWantsNewAddress = useAddressStore((s) => s.setWantsNewAddress);
   const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -49,10 +47,6 @@ export default function Navigation() {
   
   // Determine calendar href based on current state
   const calendarHref = (() => {
-    // If user explicitly wants to select a new address, go to form
-    if (mounted && wantsNewAddress) {
-      return '/';
-    }
     // If we have a last address saved, use SEO-friendly URL
     if (last.location && last.street) {
       const locationSlug = last.location.toLowerCase();
@@ -63,8 +57,11 @@ export default function Navigation() {
     return '/';
   })();
 
+  // Kalender is active on home page or any calendar route (location/street pages)
+  const isCalendarActive = pathname === '/' || isOnStreetPage;
+
   const navItems = [
-    { href: calendarHref, label: 'Kalender', icon: Calendar, active: isActive('/') },
+    { href: calendarHref, label: 'Kalender', icon: Calendar, active: isCalendarActive },
     { href: '/playground', label: 'API Playground', icon: Code2, active: isActive('/playground') },
   ];
 
@@ -81,7 +78,7 @@ export default function Navigation() {
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
             <Link
-              href={calendarHref}
+              href="/"
               className="group flex items-center gap-2"
             >
               <Logo size={36} animate />
@@ -116,7 +113,6 @@ export default function Navigation() {
               <Link
                 href="/"
                 className="hidden md:block"
-                onClick={() => setWantsNewAddress(true)}
               >
                 <Button variant="outline" size="sm" className="gap-2">
                   <MapPin className="h-4 w-4" />

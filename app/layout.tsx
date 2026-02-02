@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import Navigation from "@/components/Navigation";
 
@@ -81,6 +82,7 @@ export default function RootLayout({
           <Navigation />
         </Suspense>
         {children}
+        <Analytics />
       </body>
     </html>
   );

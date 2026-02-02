@@ -57,8 +57,8 @@ export default function Navigation() {
     return '/';
   })();
 
-  // Kalender is active on home page or any calendar route (location/street pages)
-  const isCalendarActive = pathname === '/' || isOnStreetPage;
+  // Kalender is active only on calendar routes (location/street pages), not on home
+  const isCalendarActive = isOnStreetPage;
 
   const navItems = [
     { href: calendarHref, label: 'Kalender', icon: Calendar, active: isCalendarActive },

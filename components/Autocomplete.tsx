@@ -252,16 +252,28 @@ export default function Autocomplete<TOption extends AutocompleteOption = Autoco
             className="absolute z-[100] mt-2 max-h-60 w-full overflow-y-auto rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl py-1 shadow-xl"
             style={{ scrollbarGutter: 'stable' }}
           >
-            {filtered.length === 0 ? (
+            {loading ? (
+              // Show skeleton loading items while data is being fetched
+              <>
+                {[75, 60, 85, 55].map((width, index) => (
+                  <li
+                    key={`skeleton-${index}`}
+                    className="flex items-center gap-3 px-4 py-3"
+                  >
+                    <div
+                      className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded animate-pulse"
+                      style={{ width: `${width}%` }}
+                    />
+                  </li>
+                ))}
+                <li className="flex items-center justify-center gap-2 px-4 py-2 text-xs text-zinc-400 dark:text-zinc-500 border-t border-zinc-100 dark:border-zinc-800">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Daten werden geladen…
+                </li>
+              </>
+            ) : filtered.length === 0 ? (
               <li className="flex items-center gap-2 px-4 py-3 text-sm text-zinc-500 dark:text-zinc-400">
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Lade...
-                  </>
-                ) : (
-                  emptyMessage
-                )}
+                {emptyMessage}
               </li>
             ) : (
               filtered.map((option, index) => {

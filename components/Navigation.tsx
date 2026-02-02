@@ -98,9 +98,9 @@ export default function Navigation() {
                 </motion.div>
               </div>
               <span className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                BAV
+                Abfuhr
                 <span className="hidden sm:inline text-zinc-500 dark:text-zinc-400 font-normal ml-1">
-                  Abfuhrkalender
+                  Kalender
                 </span>
               </span>
             </Link>

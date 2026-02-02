@@ -101,10 +101,7 @@ export default function AppointmentList({
   const groupByDate = (appts: Appointment[]) => {
     return appts.reduce(
       (acc, appointment) => {
-        if (!acc[appointment.date]) {
-          acc[appointment.date] = [];
-        }
-        acc[appointment.date].push(appointment);
+        (acc[appointment.date] ??= []).push(appointment);
         return acc;
       },
       {} as Record<string, Appointment[]>
@@ -134,7 +131,7 @@ export default function AppointmentList({
     return (
       <div className="space-y-3">
         {sortedDates.map((date, index) => {
-          const appointmentsForDate = groupedByDate[date];
+          const appointmentsForDate = groupedByDate[date]!;
           const fractionsForDate = appointmentsForDate
             .map((t) => findFraction(t.fractionId))
             .filter((f): f is Fraction => f !== undefined);

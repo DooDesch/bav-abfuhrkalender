@@ -272,9 +272,10 @@ export default function WasteCollectionCalendar({
 
   // Get next pickup date and its appointments
   const nextPickup = useMemo(() => {
-    if (upcomingAppointments.length === 0) return null;
+    const first = upcomingAppointments[0];
+    if (!first) return null;
     
-    const nextDate = upcomingAppointments[0].date;
+    const nextDate = first.date;
     const appointmentsOnNextDate = upcomingAppointments.filter(
       (a) => a.date === nextDate
     );

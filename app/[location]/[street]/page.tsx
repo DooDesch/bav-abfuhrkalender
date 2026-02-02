@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Home, MapPin } from 'lucide-react';
+import StartLink from '@/components/StartLink';
 import { getBAVApiService } from '@/lib/services/bav-api.service';
 import { cacheService } from '@/lib/services/cache.service';
 import { buildWasteCollectionCacheKey } from '@/lib/utils/cache-keys';
@@ -118,13 +119,7 @@ export default async function StreetPage({ params }: StreetPageProps) {
       <main className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-4xl flex-col px-4 py-6 sm:px-8 sm:py-10 lg:px-16">
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400 mb-6 flex-wrap">
-          <Link
-            href="/"
-            className="hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors flex items-center gap-1"
-          >
-            <Home className="h-4 w-4" />
-            <span>Start</span>
-          </Link>
+          <StartLink />
           <span>/</span>
           <Link
             href={`/${locationSlug}`}
@@ -170,12 +165,12 @@ export default async function StreetPage({ params }: StreetPageProps) {
                     Alle Straßen in {locationName}
                   </Button>
                 </Link>
-                <Link href="/">
+                <StartLink unstyled>
                   <Button className="gap-2">
                     <Home className="h-4 w-4" />
                     Zur Startseite
                   </Button>
-                </Link>
+                </StartLink>
               </div>
             </CardContent>
           </Card>

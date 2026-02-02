@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { MapPin, Search, ArrowRight, Home } from 'lucide-react';
+import StartLink from '@/components/StartLink';
 import { getBAVApiService } from '@/lib/services/bav-api.service';
 import {
   getLocationSlugs,
@@ -123,13 +124,7 @@ export default async function LocationPage({ params }: LocationPageProps) {
         <div className="mb-8">
           {/* Breadcrumb */}
           <nav className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400 mb-4">
-            <Link
-              href="/"
-              className="hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors flex items-center gap-1"
-            >
-              <Home className="h-4 w-4" />
-              <span>Start</span>
-            </Link>
+            <StartLink />
             <span>/</span>
             <span className="text-zinc-900 dark:text-zinc-100 font-medium">
               {locationName}
@@ -158,9 +153,9 @@ export default async function LocationPage({ params }: LocationPageProps) {
             <Search className="h-5 w-5 text-zinc-400" />
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
               Wähle deine Straße aus der Liste oder nutze{' '}
-              <Link href="/" className="text-primary hover:underline">
+              <StartLink showIcon={false} className="text-primary hover:underline inline">
                 die Suche
-              </Link>{' '}
+              </StartLink>{' '}
               für schnelleren Zugriff.
             </p>
           </CardContent>
@@ -173,9 +168,9 @@ export default async function LocationPage({ params }: LocationPageProps) {
               <p className="text-zinc-600 dark:text-zinc-400">
                 Keine Straßen für {locationName} gefunden.
               </p>
-              <Link href="/" className="mt-4 inline-block">
+              <StartLink unstyled className="mt-4 inline-block">
                 <Button>Zurück zur Startseite</Button>
-              </Link>
+              </StartLink>
             </CardContent>
           </Card>
         ) : (
@@ -213,12 +208,12 @@ export default async function LocationPage({ params }: LocationPageProps) {
 
         {/* Back to Home */}
         <div className="mt-8 text-center">
-          <Link href="/">
+          <StartLink unstyled>
             <Button variant="outline" className="gap-2">
               <Home className="h-4 w-4" />
               Zur Startseite
             </Button>
-          </Link>
+          </StartLink>
         </div>
       </main>
     </>

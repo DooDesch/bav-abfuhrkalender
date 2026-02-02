@@ -19,3 +19,6 @@ export const LAST_ADDRESS_STORAGE_KEY = 'bav-last-address';
 
 /** localStorage key for fraction filter selection in waste calendar */
 export const FRACTION_FILTER_STORAGE_KEY = 'bav-waste-collection-filter';
+
+/** localStorage key for cookie consent preferences */
+export const COOKIE_CONSENT_STORAGE_KEY = 'bav-cookie-consent';

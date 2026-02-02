@@ -6,8 +6,8 @@ import type { MetadataRoute } from 'next';
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'BAV Abfuhrkalender',
-    short_name: 'BAV Kalender',
+    name: 'Dein Abfuhrkalender',
+    short_name: 'Abfuhrkalender',
     description:
       'Müllabfuhr-Termine für das Bergische Land. Finde alle Abfuhrtermine für deine Adresse.',
     start_url: '/',

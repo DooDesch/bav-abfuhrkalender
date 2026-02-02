@@ -17,7 +17,7 @@ export default function JsonLd({ type = 'website', location, street }: JsonLdPro
   const webApplicationSchema = {
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
-    name: 'BAV Abfuhrkalender',
+    name: 'Dein Abfuhrkalender',
     description:
       'Finde alle Müllabfuhr-Termine für deine Adresse im BAV-Gebiet (Bergischer Abfallwirtschaftsverband).',
     url: baseUrl,
@@ -112,7 +112,7 @@ export default function JsonLd({ type = 'website', location, street }: JsonLdPro
         url: `${baseUrl}/${location.toLowerCase()}/${encodeURIComponent(street.toLowerCase())}`,
         isPartOf: {
           '@type': 'WebSite',
-          name: 'BAV Abfuhrkalender',
+          name: 'Dein Abfuhrkalender',
           url: baseUrl,
         },
       };
@@ -127,7 +127,7 @@ export default function JsonLd({ type = 'website', location, street }: JsonLdPro
         url: `${baseUrl}/${location.toLowerCase()}`,
         isPartOf: {
           '@type': 'WebSite',
-          name: 'BAV Abfuhrkalender',
+          name: 'Dein Abfuhrkalender',
           url: baseUrl,
         },
       };

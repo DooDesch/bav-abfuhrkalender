@@ -47,7 +47,7 @@ async function fetchFromNominatim(locationName: string): Promise<{ lat: number; 
     const response = await fetch(url, {
       headers: {
         // Nominatim requires a valid User-Agent
-        'User-Agent': 'BAV-Abfuhrkalender/1.0 (https://github.com/DooDesch)',
+        'User-Agent': 'Dein-Abfuhrkalender/1.0 (https://github.com/DooDesch)',
       },
     });
 

@@ -64,7 +64,7 @@ export async function generateMetadata({
       canonical: `/${locationSlug}`,
     },
     openGraph: {
-      title: `Abfuhrkalender ${locationName} | BAV`,
+      title: `Abfuhrkalender ${locationName} | Dein Abfuhrkalender`,
       description: `Finde alle Müllabfuhr-Termine für ${locationName}. Wähle deine Straße und exportiere den Kalender.`,
       url: `${baseUrl}/${locationSlug}`,
       type: 'website',

@@ -22,7 +22,7 @@ export interface IcsGeneratorOptions {
   streetName?: string;
   /** Used in UID for uniqueness (e.g. street id) */
   calendarId?: string;
-  /** Product identifier in VCALENDAR (default: -//BAV Abfuhrkalender//EN) */
+  /** Product identifier in VCALENDAR (default: -//Dein Abfuhrkalender//EN) */
   prodId?: string;
 }
 
@@ -38,7 +38,7 @@ export function buildIcs(
     locationName = '',
     streetName = '',
     calendarId = 'default',
-    prodId = '-//BAV Abfuhrkalender//EN',
+    prodId = '-//Dein Abfuhrkalender//EN',
   } = options;
 
   const now = new Date();
@@ -63,7 +63,7 @@ export function buildIcs(
     endDate.setDate(endDate.getDate() + 1);
     const endStr = endDate.toISOString().slice(0, 10).replace(/-/g, '');
 
-    const uid = `abfuhr-${calendarId}-${appt.date}-${appt.fractionId}@bav-abfuhrkalender`;
+    const uid = `abfuhr-${calendarId}-${appt.date}-${appt.fractionId}@dein-abfuhrkalender`;
     const summary = escapeIcsText(`Abfuhr: ${appt.fractionName}`);
 
     lines.push(

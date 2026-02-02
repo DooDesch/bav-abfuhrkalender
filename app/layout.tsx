@@ -47,15 +47,15 @@ const baseUrl = getBaseUrl();
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: "BAV Abfuhrkalender - Müllabfuhr-Termine im Bergischen Land",
-    template: "%s | BAV Abfuhrkalender",
+    default: "Dein Abfuhrkalender - Müllabfuhr-Termine im Bergischen Land",
+    template: "%s | Dein Abfuhrkalender",
   },
   description:
     "Finde alle Müllabfuhr-Termine für deine Adresse im BAV-Gebiet (Bergischer Abfallwirtschaftsverband). Restmüll, Gelber Sack, Papier, Glas und Biomüll – kostenlos als ICS-Kalender exportieren.",
   keywords: SEO_KEYWORDS,
   authors: [{ name: "DooDesch" }],
   creator: "DooDesch",
-  publisher: "BAV Abfuhrkalender",
+  publisher: "Dein Abfuhrkalender",
   formatDetection: {
     email: false,
     address: false,
@@ -65,14 +65,14 @@ export const metadata: Metadata = {
     type: "website",
     locale: "de_DE",
     url: baseUrl,
-    siteName: "BAV Abfuhrkalender",
-    title: "BAV Abfuhrkalender - Müllabfuhr-Termine im Bergischen Land",
+    siteName: "Dein Abfuhrkalender",
+    title: "Dein Abfuhrkalender - Müllabfuhr-Termine im Bergischen Land",
     description:
       "Alle Abfuhrtermine für deine Adresse im BAV-Gebiet. Restmüll, Gelber Sack, Papier, Glas und Biomüll auf einen Blick.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "BAV Abfuhrkalender - Müllabfuhr-Termine",
+    title: "Dein Abfuhrkalender - Müllabfuhr-Termine",
     description:
       "Finde alle Müllabfuhr-Termine für deine Adresse im Bergischen Land.",
   },

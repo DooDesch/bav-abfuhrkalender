@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import Navigation from "@/components/Navigation";
 import BottomNav from "@/components/layout/BottomNav";
@@ -11,6 +9,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getBaseUrl, SEO_KEYWORDS } from "@/lib/utils/seo";
 import JsonLd from "@/components/JsonLd";
+import CookieBanner from "@/components/CookieBanner";
+import ConsentSettings from "@/components/ConsentSettings";
+import ConditionalAnalytics from "@/components/ConditionalAnalytics";
 
 function NavigationFallback() {
   return (
@@ -126,8 +127,12 @@ export default function RootLayout({
             <BottomNav />
           </Suspense>
         </TooltipProvider>
-        <Analytics />
-        <SpeedInsights />
+        {/* Cookie consent banner - shows until user makes a choice */}
+        <CookieBanner />
+        {/* Floating button to reopen cookie settings (only visible after consent) */}
+        <ConsentSettings variant="floating" />
+        {/* Analytics only load after user consents to statistics cookies */}
+        <ConditionalAnalytics />
       </body>
     </html>
   );

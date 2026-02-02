@@ -77,10 +77,10 @@ export default function DatenschutzPage() {
               <p className="mt-1">
                 E-Mail:{' '}
                 <a 
-                  href="mailto:datenschutz@example.com" 
+                  href="mailto:doodesch+datenschutz@gmail.com" 
                   className="text-primary hover:underline"
                 >
-                  datenschutz@example.com
+                  doodesch+datenschutz@gmail.com
                 </a>
               </p>
             </div>

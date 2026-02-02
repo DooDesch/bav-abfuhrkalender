@@ -307,7 +307,7 @@ export default function WasteCollectionCalendar({
               <span className="text-zinc-500 dark:text-zinc-400"> • {data.location.name}</span>
             </div>
           </div>
-          <Link href="/?form=1" onClick={() => setWantsNewAddress(true)}>
+          <Link href="/" onClick={() => setWantsNewAddress(true)}>
             <Button variant="outline" size="sm" className="gap-2 w-full sm:w-auto">
               <ArrowLeft className="h-4 w-4" />
               <span className="sm:inline">Andere Adresse</span>

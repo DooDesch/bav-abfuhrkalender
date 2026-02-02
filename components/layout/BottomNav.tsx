@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { Calendar, Home, Code2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAddressStore } from '@/lib/stores/address.store';
+import { createStreetSlug } from '@/lib/utils/seo';
 
 // Module-level flag to track if initial animation has played
 // Persists across component remounts (route changes)
@@ -13,7 +14,6 @@ let hasAnimatedOnce = false;
 
 export default function BottomNav() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const lastLocation = useAddressStore((s) => s.lastLocation);
   const lastStreet = useAddressStore((s) => s.lastStreet);
 
@@ -30,22 +30,20 @@ export default function BottomNav() {
 
   const hasAddress = Boolean(lastLocation?.trim() && lastStreet?.trim());
 
-  // Build calendar URL with last address
+  // Build calendar URL with SEO-friendly path
   const calendarHref = hasAddress
-    ? `/?location=${encodeURIComponent(lastLocation)}&street=${encodeURIComponent(lastStreet)}`
+    ? `/${lastLocation.toLowerCase()}/${createStreetSlug(lastStreet)}`
     : '#';
 
-  // Check if we're on the calendar view (has location & street params)
-  const isOnCalendar =
-    pathname === '/' &&
-    searchParams.has('location') &&
-    searchParams.has('street');
+  // Check if we're on a street page (calendar view)
+  const pathSegments = pathname.split('/').filter(Boolean);
+  const isOnCalendar = pathSegments.length >= 2 && pathname !== '/playground';
 
   // Check if we're on the home/search form
-  const isOnHome = pathname === '/' && !isOnCalendar;
+  const isOnHome = pathname === '/';
 
   const navItems = [
-    { href: '/?form=1', label: 'Home', icon: Home, active: isOnHome },
+    { href: '/', label: 'Home', icon: Home, active: isOnHome },
     {
       href: calendarHref,
       label: 'Kalender',

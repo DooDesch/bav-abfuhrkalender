@@ -1,35 +1,36 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useAddressStore } from '@/lib/stores/address.store';
+import { createStreetSlug } from '@/lib/utils/seo';
 import AddressSearchForm from '@/components/AddressSearchForm';
 import Hero from '@/components/layout/Hero';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function HomeWithoutParams() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const getLastAddress = useAddressStore((s) => s.getLastAddress);
+  const wantsNewAddress = useAddressStore((s) => s.wantsNewAddress);
   const [showForm, setShowForm] = useState(false);
 
-  const wantsForm = searchParams.get('form') === '1';
-
   useEffect(() => {
-    if (wantsForm) {
+    // If user explicitly wants to enter a new address, show form
+    if (wantsNewAddress) {
       setShowForm(true);
       return;
     }
+    // If we have a saved address, redirect to the SEO-friendly URL
     const last = getLastAddress();
     if (last.location?.trim() && last.street?.trim()) {
-      router.replace(
-        `/?location=${encodeURIComponent(last.location)}&street=${encodeURIComponent(last.street)}`
-      );
+      const locationSlug = last.location.toLowerCase();
+      const streetSlug = createStreetSlug(last.street);
+      router.replace(`/${locationSlug}/${streetSlug}`);
       return;
     }
     setShowForm(true);
-  }, [getLastAddress, router, wantsForm]);
+  }, [getLastAddress, router, wantsNewAddress]);
 
   if (!showForm) {
     return (

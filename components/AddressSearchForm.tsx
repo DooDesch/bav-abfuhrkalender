@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { MapPin, ArrowRight, Navigation, Locate } from 'lucide-react';
 import { useAddressStore } from '@/lib/stores/address.store';
 import { useLocationsWithProximity } from '@/lib/hooks/useLocationsWithProximity';
+import { createStreetSlug } from '@/lib/utils/seo';
 import LocationAutocomplete from '@/components/LocationAutocomplete';
 import StreetAutocomplete from '@/components/StreetAutocomplete';
 import { Button } from '@/components/ui/button';
@@ -81,11 +82,9 @@ export default function AddressSearchForm({
       const trimmedStreet = street.trim();
       if (!trimmedLocation || !trimmedStreet) return;
       setLastAddress(trimmedLocation, trimmedStreet);
-      const params = new URLSearchParams({
-        location: trimmedLocation,
-        street: trimmedStreet,
-      });
-      router.push(`/?${params.toString()}`);
+      const locationSlug = trimmedLocation.toLowerCase();
+      const streetSlug = createStreetSlug(trimmedStreet);
+      router.push(`/${locationSlug}/${streetSlug}`);
     },
     [location, street, setLastAddress, router]
   );

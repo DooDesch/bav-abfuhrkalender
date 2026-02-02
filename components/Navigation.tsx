@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useAddressStore } from '@/lib/stores/address.store';
+import { createStreetSlug } from '@/lib/utils/seo';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Code2, MapPin, Recycle } from 'lucide-react';
@@ -15,7 +16,6 @@ let hasAnimatedOnce = false;
 
 export default function Navigation() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const getLastAddress = useAddressStore((s) => s.getLastAddress);
   const wantsNewAddress = useAddressStore((s) => s.wantsNewAddress);
   const setWantsNewAddress = useAddressStore((s) => s.setWantsNewAddress);
@@ -40,10 +40,8 @@ export default function Navigation() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const hasLocationAndStreet =
-    pathname === '/' &&
-    searchParams.get('location')?.trim() &&
-    searchParams.get('street')?.trim();
+  // Check if we're on a street page (has location and street in path)
+  const isOnStreetPage = pathname.split('/').filter(Boolean).length >= 2 && pathname !== '/playground';
 
   const isActive = (path: string) => pathname === path;
 
@@ -53,15 +51,13 @@ export default function Navigation() {
   const calendarHref = (() => {
     // If user explicitly wants to select a new address, go to form
     if (mounted && wantsNewAddress) {
-      return '/?form=1';
+      return '/';
     }
-    // If currently on homepage with address params, keep them
-    if (pathname === '/' && searchParams.get('location') && searchParams.get('street')) {
-      return `/?${searchParams.toString()}`;
-    }
-    // If we have a last address saved, use it
+    // If we have a last address saved, use SEO-friendly URL
     if (last.location && last.street) {
-      return `/?location=${encodeURIComponent(last.location)}&street=${encodeURIComponent(last.street)}`;
+      const locationSlug = last.location.toLowerCase();
+      const streetSlug = createStreetSlug(last.street);
+      return `/${locationSlug}/${streetSlug}`;
     }
     // Default to homepage
     return '/';
@@ -124,9 +120,9 @@ export default function Navigation() {
             </div>
 
             {/* Right side actions - Desktop only */}
-            {hasLocationAndStreet && (
+            {isOnStreetPage && (
               <Link
-                href="/?form=1"
+                href="/"
                 className="hidden md:block"
                 onClick={() => setWantsNewAddress(true)}
               >

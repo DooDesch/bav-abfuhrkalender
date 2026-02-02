@@ -182,7 +182,7 @@ export default async function LocationPage({ params }: LocationPageProps) {
           <div className="space-y-6">
             {letters.map((letter) => (
               <section key={letter}>
-                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-3 sticky top-16 bg-gradient-to-b from-white/95 via-white/90 to-transparent dark:from-zinc-950/95 dark:via-zinc-950/90 py-2 z-10 backdrop-blur-sm">
+                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-3 sticky top-16 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md py-2 px-3 -mx-3 z-10 rounded-lg">
                   {letter}
                 </h2>
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">

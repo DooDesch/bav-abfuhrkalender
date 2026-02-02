@@ -9,6 +9,9 @@ export const CACHE_TTL = parseInt(
   10
 ); // 1 hour in seconds
 
+/** Cooldown for cache refresh requests (10 minutes in seconds) */
+export const CACHE_REFRESH_COOLDOWN = 10 * 60; // 10 minutes in seconds
+
 export const NEXT_REVALIDATE = 3600; // 1 hour in seconds
 
 /** localStorage key for last selected address (location + street) */

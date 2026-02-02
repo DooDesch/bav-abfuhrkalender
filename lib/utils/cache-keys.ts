@@ -27,3 +27,16 @@ export function normalizeAddressKey(
   const str = street.trim().toLowerCase();
   return loc && str ? `${loc}|${str}` : '';
 }
+
+/**
+ * Build a cache key for tracking cache refresh cooldowns
+ * Used to prevent spam of the cache refresh endpoint
+ */
+export function buildCacheRefreshCooldownKey(
+  location: string,
+  street: string
+): string {
+  const normalizedLocation = location.trim().toLowerCase();
+  const normalizedStreet = street.trim().toLowerCase();
+  return `refresh-cooldown:${normalizedLocation}:${normalizedStreet}`;
+}

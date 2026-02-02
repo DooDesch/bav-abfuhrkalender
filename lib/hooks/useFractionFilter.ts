@@ -4,6 +4,9 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { Fraction } from '@/lib/types/bav-api.types';
 import { FRACTION_FILTER_STORAGE_KEY } from '@/lib/config/constants';
 
+/** Key used to store the last used filters for suggestions */
+const LAST_USED_FILTERS_KEY = '_lastUsedFilters';
+
 interface UseFractionFilterOptions {
   /** Available fractions to filter */
   availableFractions: Fraction[];
@@ -24,11 +27,53 @@ interface UseFractionFilterReturn {
   toggleFraction: (fractionId: number) => void;
   /** Whether the component has mounted (for hydration safety) */
   mounted: boolean;
+  /** Whether this address is being used for the first time (no saved filters) */
+  isFirstTimeForAddress: boolean;
+  /** Mark this address as configured (dismisses the setup dialog) */
+  markAsConfigured: () => void;
+}
+
+/**
+ * Helper to get the stored filter data from localStorage
+ */
+function getStoredFilterData(): Record<string, number[]> {
+  if (typeof window === 'undefined') return {};
+  
+  try {
+    const raw = localStorage.getItem(FRACTION_FILTER_STORAGE_KEY);
+    if (!raw) return {};
+    
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, number[]>;
+    }
+  } catch {
+    // Ignore errors
+  }
+  return {};
+}
+
+/**
+ * Helper to save filter data to localStorage
+ */
+function saveFilterData(data: Record<string, number[]>): void {
+  if (typeof window === 'undefined') return;
+  
+  try {
+    localStorage.setItem(FRACTION_FILTER_STORAGE_KEY, JSON.stringify(data));
+  } catch {
+    // Ignore errors (e.g., localStorage full)
+  }
 }
 
 /**
  * Hook to manage fraction filter state with localStorage persistence
  * Handles hydration safely and persists filter state per address
+ * 
+ * Features:
+ * - Persists filter selection per address (location + street)
+ * - Detects first-time usage for an address to show setup dialog
+ * - Uses last used filters as suggestion for new addresses
  */
 export function useFractionFilter({
   availableFractions,
@@ -44,6 +89,12 @@ export function useFractionFilter({
     () => new Set(availableFractions.map((f) => f.id))
   );
 
+  // Track if this is the first time for this address
+  const [isFirstTimeForAddress, setIsFirstTimeForAddress] = useState(false);
+  
+  // Track if user has explicitly configured (dismissed the dialog)
+  const hasConfiguredRef = useRef(false);
+
   // Gate save effect until first restore has run
   const initialRestoreDoneRef = useRef(false);
   const [mounted, setMounted] = useState(false);
@@ -58,26 +109,40 @@ export function useFractionFilter({
     if (!mounted || typeof window === 'undefined') return;
 
     try {
-      const saved = localStorage.getItem(FRACTION_FILTER_STORAGE_KEY);
-      if (!saved) {
-        initialRestoreDoneRef.current = true;
-        return;
-      }
+      const storedData = getStoredFilterData();
+      
+      // Check if we have saved filters for this specific address
+      const hasAddressFilters = storageKey && storedData[storageKey] !== undefined;
+      
+      if (hasAddressFilters) {
+        // Address has saved filters - restore them
+        const rawIds = storedData[storageKey];
+        const savedSet = new Set(rawIds);
+        const filtered = new Set(
+          Array.from(savedSet).filter((id) => availableFractionIds.has(id))
+        );
 
-      const parsed = JSON.parse(saved) as number[] | Record<string, number[]>;
-      const rawIds: number[] = Array.isArray(parsed)
-        ? parsed
-        : storageKey
-          ? (parsed[storageKey] ?? [])
-          : [];
-
-      const savedSet = new Set(rawIds);
-      const filtered = new Set(
-        Array.from(savedSet).filter((id) => availableFractionIds.has(id))
-      );
-
-      if (filtered.size > 0) {
-        setSelectedFractions(filtered);
+        if (filtered.size > 0) {
+          setSelectedFractions(filtered);
+        }
+        setIsFirstTimeForAddress(false);
+      } else {
+        // First time for this address
+        // Check if we have lastUsedFilters to use as suggestion
+        const lastUsedFilters = storedData[LAST_USED_FILTERS_KEY];
+        
+        if (lastUsedFilters && lastUsedFilters.length > 0) {
+          // Use last used filters as suggestion (filtered to available fractions)
+          const suggested = new Set(
+            lastUsedFilters.filter((id) => availableFractionIds.has(id))
+          );
+          if (suggested.size > 0) {
+            setSelectedFractions(suggested);
+          }
+        }
+        // else: keep all fractions selected (default)
+        
+        setIsFirstTimeForAddress(true);
       }
     } catch {
       // Ignore errors
@@ -86,33 +151,32 @@ export function useFractionFilter({
     }
   }, [mounted, storageKey, availableFractionIds]);
 
-  // Persist to localStorage when selection changes
+  // Persist to localStorage when selection changes (only after initial restore and configuration)
   useEffect(() => {
     if (!initialRestoreDoneRef.current || typeof window === 'undefined' || !storageKey) {
       return;
     }
+    
+    // Only save if user has configured or this isn't the first time
+    if (isFirstTimeForAddress && !hasConfiguredRef.current) {
+      return;
+    }
 
     try {
-      const raw = localStorage.getItem(FRACTION_FILTER_STORAGE_KEY);
-      let byAddress: Record<string, number[]> = {};
-
-      if (typeof raw === 'string') {
-        try {
-          const parsed = JSON.parse(raw);
-          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-            byAddress = parsed as Record<string, number[]>;
-          }
-        } catch {
-          // Invalid JSON or legacy array format, start fresh
-        }
-      }
-
-      byAddress[storageKey] = Array.from(selectedFractions);
-      localStorage.setItem(FRACTION_FILTER_STORAGE_KEY, JSON.stringify(byAddress));
+      const storedData = getStoredFilterData();
+      const fractionArray = Array.from(selectedFractions);
+      
+      // Save for this address
+      storedData[storageKey] = fractionArray;
+      
+      // Also update lastUsedFilters for suggestions on new addresses
+      storedData[LAST_USED_FILTERS_KEY] = fractionArray;
+      
+      saveFilterData(storedData);
     } catch {
-      // Ignore errors (e.g., localStorage full)
+      // Ignore errors
     }
-  }, [selectedFractions, storageKey]);
+  }, [selectedFractions, storageKey, isFirstTimeForAddress]);
 
   // Clean up selection when available fractions change
   useEffect(() => {
@@ -148,6 +212,33 @@ export function useFractionFilter({
     });
   }, []);
 
+  /**
+   * Mark this address as configured by the user
+   * This will:
+   * 1. Save the current filter selection
+   * 2. Update lastUsedFilters
+   * 3. Dismiss the first-time setup dialog
+   */
+  const markAsConfigured = useCallback(() => {
+    if (!storageKey) return;
+    
+    hasConfiguredRef.current = true;
+    setIsFirstTimeForAddress(false);
+    
+    // Immediately save the current selection
+    try {
+      const storedData = getStoredFilterData();
+      const fractionArray = Array.from(selectedFractions);
+      
+      storedData[storageKey] = fractionArray;
+      storedData[LAST_USED_FILTERS_KEY] = fractionArray;
+      
+      saveFilterData(storedData);
+    } catch {
+      // Ignore errors
+    }
+  }, [storageKey, selectedFractions]);
+
   return {
     selectedFractions,
     setSelectedFractions,
@@ -155,5 +246,7 @@ export function useFractionFilter({
     deselectAll,
     toggleFraction,
     mounted,
+    isFirstTimeForAddress,
+    markAsConfigured,
   };
 }

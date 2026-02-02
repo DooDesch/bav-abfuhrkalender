@@ -22,6 +22,7 @@ import { FadeIn } from '@/components/animations';
 import AppointmentList from './AppointmentList';
 import FractionFilter from './FractionFilter';
 import FractionBadge from './FractionBadge';
+import FilterSetupDialog from './FilterSetupDialog';
 import { cn } from '@/lib/utils';
 
 // Helper to get relative time info
@@ -243,6 +244,9 @@ export default function WasteCollectionCalendar({
   const {
     selectedFractions,
     setSelectedFractions,
+    isFirstTimeForAddress,
+    markAsConfigured,
+    mounted,
   } = useFractionFilter({
     availableFractions,
     storageKey,
@@ -493,6 +497,15 @@ export default function WasteCollectionCalendar({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Filter Setup Dialog - shown on first time for this address */}
+      <FilterSetupDialog
+        open={mounted && isFirstTimeForAddress}
+        fractions={availableFractions}
+        selectedFractions={selectedFractions}
+        onFilterChange={setSelectedFractions}
+        onConfirm={markAsConfigured}
+      />
     </motion.div>
   );
 }

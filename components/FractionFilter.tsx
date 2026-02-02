@@ -1,12 +1,37 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { useModalDialog } from '@/components/Modal';
 import type { Fraction } from '@/lib/types/bav-api.types';
+
+type DropdownPosition =
+  | { type: 'bottom-sheet' }
+  | { type: 'dropdown'; top: number; left: number; width: number };
 
 interface FractionFilterProps {
   fractions: Fraction[];
   selectedFractions: Set<number>;
   onFilterChange: (selected: Set<number>) => void;
+}
+
+const DESKTOP_BREAKPOINT = 640;
+
+function getDropdownPosition(
+  button: HTMLButtonElement | null
+): DropdownPosition | null {
+  if (!button) return null;
+  const rect = button.getBoundingClientRect();
+  if (typeof window === 'undefined') return null;
+  if (window.innerWidth < DESKTOP_BREAKPOINT) {
+    return { type: 'bottom-sheet' };
+  }
+  return {
+    type: 'dropdown',
+    top: rect.bottom + 8,
+    left: rect.left,
+    width: Math.max(rect.width, 256),
+  };
 }
 
 export default function FractionFilter({
@@ -15,6 +40,31 @@ export default function FractionFilter({
   onFilterChange,
 }: FractionFilterProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const modalDialogRef = useModalDialog();
+  const [dropdownPosition, setDropdownPosition] =
+    useState<DropdownPosition | null>(null);
+
+  // When inside a modal, portal into the dialog (top layer) so the dropdown is above the modal and clickable
+  const portalTarget =
+    modalDialogRef?.current ?? (typeof document !== 'undefined' ? document.body : null);
+
+  // Measure button and position dropdown (portal avoids clipping inside modals)
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      setDropdownPosition(null);
+      return;
+    }
+    const update = () =>
+      setDropdownPosition(getDropdownPosition(buttonRef.current));
+    update();
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, true);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, true);
+    };
+  }, [isOpen]);
 
   const toggleFraction = (fractionId: number) => {
     const newSelected = new Set(selectedFractions);
@@ -63,7 +113,7 @@ export default function FractionFilter({
           </div>
         </div>
       </div>
-      <div className="max-h-64 overflow-y-auto p-2 sm:max-h-64">
+      <div className="min-h-0 flex-1 overflow-y-auto p-2 sm:max-h-64">
         {fractions.length === 0 ? (
           <p className="flex min-h-[44px] items-center p-3 text-sm text-zinc-500 dark:text-zinc-400">
             Keine Fraktionen verfügbar
@@ -101,9 +151,35 @@ export default function FractionFilter({
     </>
   );
 
+  const dropdownPanel =
+    isOpen && dropdownPosition ? (
+      <>
+        <div
+          className="fixed inset-0 z-100 cursor-pointer bg-black/20 sm:bg-transparent"
+          onClick={() => setIsOpen(false)}
+          aria-hidden
+        />
+        <div
+          className="fixed z-100 flex max-h-[70vh] flex-col overflow-hidden rounded-t-lg border border-b-0 border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900 sm:max-h-64 sm:rounded-lg sm:border-b"
+          style={
+            dropdownPosition.type === 'bottom-sheet'
+              ? { bottom: 0, left: 0, right: 0 }
+              : {
+                  top: dropdownPosition.top,
+                  left: dropdownPosition.left,
+                  width: dropdownPosition.width,
+                }
+          }
+        >
+          {panelContent}
+        </div>
+      </>
+    ) : null;
+
   return (
     <div className="relative">
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="flex min-h-[44px] cursor-pointer items-center gap-2 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
@@ -133,19 +209,7 @@ export default function FractionFilter({
         )}
       </button>
 
-      {isOpen && (
-        <>
-          <div
-            className="fixed inset-0 z-10 cursor-pointer bg-black/20 sm:bg-transparent"
-            onClick={() => setIsOpen(false)}
-            aria-hidden
-          />
-          {/* Mobile: bottom sheet; Desktop: dropdown below button */}
-          <div className="fixed bottom-0 left-0 right-0 z-20 max-h-[70vh] overflow-hidden rounded-t-lg border border-b-0 border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900 sm:absolute sm:bottom-auto sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:max-h-64 sm:w-64 sm:rounded-lg sm:border-b">
-            {panelContent}
-          </div>
-        </>
-      )}
+      {portalTarget && createPortal(dropdownPanel, portalTarget)}
     </div>
   );
 }

@@ -1,21 +1,19 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, useId, type DependencyList } from 'react';
+import { useCallback, useEffect, useRef, useState, useId, type DependencyList, type KeyboardEvent } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronDown, Loader2, Search } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Label } from '@/components/ui/label';
 
 export interface AutocompleteOption {
   id: number | string;
   name: string;
 }
 
-const inputClassName =
-  'w-full rounded-md border border-zinc-300 px-3 py-2 text-zinc-900 placeholder-zinc-500 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-400';
-const dropdownClassName =
-  'absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900';
-
 export interface AutocompleteProps<TOption extends AutocompleteOption = AutocompleteOption> {
   value: string;
   onChange: (value: string) => void;
-  /** Called when user selects an option from the dropdown (e.g. to clear dependent fields). */
   onSelect?: (value: string) => void;
   id?: string;
   label?: string;
@@ -26,9 +24,7 @@ export interface AutocompleteProps<TOption extends AutocompleteOption = Autocomp
   required?: boolean;
   disabled?: boolean;
   getOptionLabel?: (option: TOption) => string;
-  /** Static options (use when not loading from API). */
   options?: TOption[];
-  /** Load options asynchronously; when provided, loadOptionsDeps controls when to refetch. */
   loadOptions?: (signal: AbortSignal) => Promise<TOption[]>;
   loadOptionsDeps?: DependencyList;
 }
@@ -63,8 +59,10 @@ export default function Autocomplete<TOption extends AutocompleteOption = Autoco
   const [options, setOptions] = useState<TOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
   const listId = useId();
   const id = idProp ?? listId;
 
@@ -86,7 +84,6 @@ export default function Autocomplete<TOption extends AutocompleteOption = Autoco
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-    // Refetch when loadOptionsDeps change; loadOptions is called but not in deps so caller can pass inline loader that closes over deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasLoadOptions, ...loadOptionsDeps]);
 
@@ -94,6 +91,7 @@ export default function Autocomplete<TOption extends AutocompleteOption = Autoco
     function handleClick(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false);
+        setHighlightedIndex(-1);
       }
     }
     document.addEventListener('mousedown', handleClick);
@@ -103,14 +101,76 @@ export default function Autocomplete<TOption extends AutocompleteOption = Autoco
   const resolvedOptions = hasLoadOptions ? options : (optionsProp ?? []);
   const filtered = filterOptions(resolvedOptions, value, getOptionLabel);
 
+  useEffect(() => {
+    setHighlightedIndex(-1);
+  }, [filtered.length, value]);
+
+  useEffect(() => {
+    if (highlightedIndex >= 0 && listRef.current) {
+      const items = listRef.current.querySelectorAll('[role="option"]');
+      const highlightedItem = items[highlightedIndex];
+      if (highlightedItem) {
+        highlightedItem.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [highlightedIndex]);
+
   const handleSelect = useCallback(
     (selectedValue: string) => {
       onChange(selectedValue);
       onSelect?.(selectedValue);
       setOpen(false);
+      setHighlightedIndex(-1);
       inputRef.current?.blur();
     },
     [onChange, onSelect]
+  );
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLInputElement>) => {
+      if (!open) {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          setOpen(true);
+          return;
+        }
+        return;
+      }
+
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          setHighlightedIndex((prev) =>
+            prev < filtered.length - 1 ? prev + 1 : 0
+          );
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          setHighlightedIndex((prev) =>
+            prev > 0 ? prev - 1 : filtered.length - 1
+          );
+          break;
+        case 'Enter':
+          e.preventDefault();
+          if (highlightedIndex >= 0 && highlightedIndex < filtered.length) {
+            const option = filtered[highlightedIndex];
+            if (option) {
+              handleSelect(getOptionLabel(option));
+            }
+          }
+          break;
+        case 'Escape':
+          e.preventDefault();
+          setOpen(false);
+          setHighlightedIndex(-1);
+          break;
+        case 'Tab':
+          setOpen(false);
+          setHighlightedIndex(-1);
+          break;
+      }
+    },
+    [open, filtered, highlightedIndex, handleSelect, getOptionLabel]
   );
 
   const displayPlaceholder = disabled
@@ -119,63 +179,126 @@ export default function Autocomplete<TOption extends AutocompleteOption = Autoco
       ? loadingPlaceholder ?? placeholder
       : placeholder;
 
+  const highlightedOptionId =
+    highlightedIndex >= 0 && filtered[highlightedIndex]
+      ? `${listId}-option-${highlightedIndex}`
+      : undefined;
+
   return (
     <div ref={containerRef} className="relative">
       {label && (
-        <label
+        <Label
           htmlFor={id}
-          className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+          className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
         >
           {label}
-        </label>
+          {required && <span className="text-red-500 ml-1">*</span>}
+        </Label>
       )}
-      <input
-        ref={inputRef}
-        id={id}
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onFocus={() => {
-          if (!disabled) setOpen(true);
-        }}
-        placeholder={displayPlaceholder}
-        required={required}
-        disabled={disabled}
-        autoComplete="off"
-        aria-expanded={open}
-        aria-controls={listId}
-        aria-autocomplete="list"
-        role="combobox"
-        className={`${inputClassName} ${disabled ? 'disabled:opacity-60 disabled:cursor-not-allowed' : ''}`}
-      />
-      {open && !disabled && (
-        <ul id={listId} role="listbox" className={dropdownClassName}>
-          {filtered.length === 0 ? (
-            <li className="flex min-h-[44px] items-center px-3 py-3 text-sm text-zinc-500 dark:text-zinc-400">
-              {loading ? 'Lade…' : emptyMessage}
-            </li>
+      <div className="relative">
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
+          {loading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            filtered.map((option) => {
-              const labelText = getOptionLabel(option);
-              return (
-                <li
-                  key={option.id}
-                  role="option"
-                  aria-selected={value === labelText}
-                  tabIndex={-1}
-                  className="flex min-h-[44px] cursor-pointer items-center px-3 py-3 text-sm text-zinc-900 hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-zinc-800"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    handleSelect(labelText);
-                  }}
-                >
-                  {labelText}
-                </li>
-              );
-            })
+            <Search className="h-4 w-4" />
           )}
-        </ul>
-      )}
+        </div>
+        <input
+          ref={inputRef}
+          id={id}
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onFocus={(e) => {
+            if (!disabled) {
+              setOpen(true);
+              // Scroll input into view on mobile when keyboard opens
+              // Small delay to allow keyboard to appear first
+              setTimeout(() => {
+                e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }, 300);
+            }
+          }}
+          onKeyDown={handleKeyDown}
+          placeholder={displayPlaceholder}
+          required={required}
+          disabled={disabled}
+          autoComplete="off"
+          aria-expanded={open}
+          aria-controls={listId}
+          aria-autocomplete="list"
+          aria-activedescendant={highlightedOptionId}
+          role="combobox"
+          className={cn(
+            'flex h-11 w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm pl-10 pr-10 py-2 text-base ring-offset-background placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200',
+            open && 'ring-2 ring-primary ring-offset-2'
+          )}
+        />
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400">
+          <ChevronDown className={cn('h-4 w-4 transition-transform duration-200', open && 'rotate-180')} />
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {open && !disabled && (
+          <motion.ul
+            ref={listRef}
+            id={listId}
+            role="listbox"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className="absolute z-[100] mt-2 max-h-60 w-full overflow-y-auto rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl py-1 shadow-xl"
+            style={{ scrollbarGutter: 'stable' }}
+          >
+            {filtered.length === 0 ? (
+              <li className="flex items-center gap-2 px-4 py-3 text-sm text-zinc-500 dark:text-zinc-400">
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Lade...
+                  </>
+                ) : (
+                  emptyMessage
+                )}
+              </li>
+            ) : (
+              filtered.map((option, index) => {
+                const labelText = getOptionLabel(option);
+                const isHighlighted = index === highlightedIndex;
+                const isSelected = value === labelText;
+                return (
+                  <motion.li
+                    key={option.id}
+                    id={`${listId}-option-${index}`}
+                    role="option"
+                    aria-selected={isSelected}
+                    tabIndex={-1}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.02 }}
+                    className={cn(
+                      'flex cursor-pointer items-center px-4 py-3 text-sm transition-colors',
+                      isHighlighted
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800',
+                      isSelected && 'font-medium'
+                    )}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      handleSelect(labelText);
+                    }}
+                    onMouseEnter={() => setHighlightedIndex(index)}
+                  >
+                    {labelText}
+                  </motion.li>
+                );
+              })
+            )}
+          </motion.ul>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

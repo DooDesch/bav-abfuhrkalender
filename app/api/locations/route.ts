@@ -1,8 +1,18 @@
 import { NextResponse } from 'next/server';
-import { BAVApiService } from '@/lib/services/bav-api.service';
+import { unstable_cache } from 'next/cache';
+import { getBAVApiService } from '@/lib/services/bav-api.service';
 import { handleApiError } from '@/lib/utils/error-handler';
+import { CACHE_TTL } from '@/lib/config/constants';
 
-export const dynamic = 'force-dynamic';
+// Cache locations for the configured TTL
+const getCachedLocations = unstable_cache(
+  async () => {
+    const apiService = getBAVApiService();
+    return apiService.getLocations();
+  },
+  ['locations'],
+  { revalidate: CACHE_TTL, tags: ['locations'] }
+);
 
 /**
  * GET /api/locations
@@ -10,8 +20,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET() {
   try {
-    const apiService = new BAVApiService();
-    const locations = await apiService.getLocations();
+    const locations = await getCachedLocations();
     return NextResponse.json({ success: true, data: locations });
   } catch (error) {
     return handleApiError(error, 'Failed to fetch locations');

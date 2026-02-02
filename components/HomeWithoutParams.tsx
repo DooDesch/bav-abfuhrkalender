@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { motion } from 'framer-motion';
 import { useAddressStore } from '@/lib/stores/address.store';
 import AddressSearchForm from '@/components/AddressSearchForm';
+import Hero from '@/components/layout/Hero';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function HomeWithoutParams() {
   const router = useRouter();
@@ -30,19 +33,23 @@ export default function HomeWithoutParams() {
 
   if (!showForm) {
     return (
-      <p className="text-center text-zinc-600 dark:text-zinc-400">
-        Lade...
-      </p>
+      <div className="flex flex-col items-center justify-center py-12 px-4">
+        <Skeleton className="h-12 w-64 rounded-xl mb-4" />
+        <Skeleton className="h-6 w-80 rounded-lg mb-8" />
+        <Skeleton className="h-[280px] w-full max-w-md rounded-2xl" />
+      </div>
     );
   }
 
   return (
-    <div className="flex w-full max-w-md flex-col items-center gap-6">
-      <p className="text-center text-zinc-600 dark:text-zinc-400">
-        Abfuhrtermine für Ihre Adresse im BAV-Gebiet. Wählen Sie Ort und
-        Straße, um den Abfuhrkalender anzuzeigen.
-      </p>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="flex w-full max-w-full flex-col items-center gap-4"
+    >
+      <Hero />
       <AddressSearchForm />
-    </div>
+    </motion.div>
   );
 }

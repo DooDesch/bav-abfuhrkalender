@@ -1,10 +1,15 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
+import { MapPin, ArrowRight, Navigation, Locate } from 'lucide-react';
 import { useAddressStore } from '@/lib/stores/address.store';
+import { useLocationsWithProximity } from '@/lib/hooks/useLocationsWithProximity';
 import LocationAutocomplete from '@/components/LocationAutocomplete';
 import StreetAutocomplete from '@/components/StreetAutocomplete';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface AddressSearchFormProps {
   defaultLocation?: string;
@@ -23,8 +28,15 @@ export default function AddressSearchForm({
   const setAddress = useAddressStore((s) => s.setAddress);
   const getLastAddress = useAddressStore((s) => s.getLastAddress);
   const setLastAddress = useAddressStore((s) => s.setLastAddress);
+  
+  // Track if we've already auto-filled from geolocation
+  const autoFilledRef = useRef(false);
+  const [wasAutoFilled, setWasAutoFilled] = useState(false);
+  
+  // Get nearest location from geolocation
+  const { nearestLocation, isGeolocating } = useLocationsWithProximity();
 
-  // Hydrate store from URL when defaults are set; otherwise from last address (e.g. "Andere Adresse")
+  // Initialize with defaults or last address
   useEffect(() => {
     if (defaultLocation !== '' || defaultStreet !== '') {
       setAddress(defaultLocation, defaultStreet);
@@ -35,6 +47,28 @@ export default function AddressSearchForm({
       }
     }
   }, [defaultLocation, defaultStreet, setAddress, getLastAddress]);
+
+  // Auto-fill location from geolocation if no location is set
+  useEffect(() => {
+    // Only auto-fill once, and only if:
+    // - We haven't auto-filled yet
+    // - There's no default location
+    // - There's no current location in the store
+    // - We have a nearest location with valid distance (coordinates loaded)
+    // - Geolocation check is complete
+    if (
+      !autoFilledRef.current &&
+      !defaultLocation &&
+      !location &&
+      nearestLocation &&
+      nearestLocation.distance !== undefined && // Ensure coordinates are loaded
+      !isGeolocating
+    ) {
+      autoFilledRef.current = true;
+      setLocation(nearestLocation.name);
+      setWasAutoFilled(true);
+    }
+  }, [nearestLocation, isGeolocating, defaultLocation, location, setLocation]);
 
   const handleLocationSelect = useCallback(() => {
     setStreet('');
@@ -56,40 +90,79 @@ export default function AddressSearchForm({
     [location, street, setLastAddress, router]
   );
 
+  const canSubmit = location.trim() && street.trim();
+
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="w-full max-w-md rounded-lg border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.3, ease: [0.21, 0.47, 0.32, 0.98] }}
+      className="w-full max-w-md mx-auto"
     >
-      <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-        Ort und Straße eingeben
-      </h2>
-      <div className="space-y-4">
-        <LocationAutocomplete
-          value={location}
-          onChange={setLocation}
-          onSelect={handleLocationSelect}
-          id="location"
-          label="Ort"
-          placeholder="z. B. Ort suchen"
-          required
-        />
-        <StreetAutocomplete
-          location={location}
-          value={street}
-          onChange={setStreet}
-          id="street"
-          label="Straße"
-          placeholder="z. B. Straße suchen"
-          required
-        />
-        <button
-          type="submit"
-          className="min-h-[44px] w-full cursor-pointer rounded-md bg-zinc-900 px-4 py-2 font-medium text-white hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-        >
-          Abfuhrkalender anzeigen
-        </button>
-      </div>
-    </form>
+      <Card glass>
+        <CardContent className="p-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Location Icon Header */}
+            <div className="flex items-center gap-3 mb-6">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg shadow-green-500/25">
+                <Navigation className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                  Adresse eingeben
+                </h2>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  {wasAutoFilled ? (
+                    <span className="inline-flex items-center gap-1">
+                      <Locate className="h-3 w-3 text-green-500" />
+                      Ort automatisch erkannt
+                    </span>
+                  ) : (
+                    'Wähle deinen Ort und deine Straße'
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* Location Input */}
+            <div className="space-y-2">
+              <LocationAutocomplete
+                value={location}
+                onChange={setLocation}
+                onSelect={handleLocationSelect}
+                id="location"
+                label="Ort"
+                placeholder="z. B. Wermelskirchen"
+                required
+              />
+            </div>
+
+            {/* Street Input */}
+            <div className="space-y-2">
+              <StreetAutocomplete
+                location={location}
+                value={street}
+                onChange={setStreet}
+                id="street"
+                label="Straße"
+                placeholder="z. B. Hauptstraße"
+                required
+              />
+            </div>
+
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              disabled={!canSubmit}
+              className="w-full h-12 text-base font-medium gap-2 group"
+            >
+              <MapPin className="h-5 w-5" />
+              Abfuhrkalender anzeigen
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }

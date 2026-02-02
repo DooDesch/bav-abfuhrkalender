@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { BAVApiService } from '@/lib/services/bav-api.service';
+import { getBAVApiService } from '@/lib/services/bav-api.service';
 import { cacheService } from '@/lib/services/cache.service';
 import { CACHE_TTL } from '@/lib/config/constants';
 import { handleApiError, createSuccessResponse } from '@/lib/utils/error-handler';
+import { buildWasteCollectionCacheKey } from '@/lib/utils/cache-keys';
 import type { WasteCalendarResponse } from '@/lib/types/bav-api.types';
 
 // Force handler to run on every request so in-memory cache can be used
 export const dynamic = 'force-dynamic';
-
-function buildCacheKey(location: string, street: string): string {
-  const normalizedLocation = location.trim().toLowerCase();
-  const normalizedStreet = street.trim().toLowerCase();
-  return `waste-collection:${normalizedLocation}:${normalizedStreet}`;
-}
 
 function getLocationAndStreet(request: NextRequest): { location: string; street: string } | null {
   const { searchParams } = new URL(request.url);
@@ -41,7 +36,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { location, street } = params;
-    const cacheKey = buildCacheKey(location, street);
+    const cacheKey = buildWasteCollectionCacheKey(location, street);
 
     // Check in-memory cache first
     const cachedData = cacheService.get<WasteCalendarResponse>(cacheKey);
@@ -54,7 +49,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const apiService = new BAVApiService();
+    const apiService = getBAVApiService();
     const data = await apiService.getWasteCollectionData(location, street);
 
     cacheService.set(cacheKey, data);
@@ -89,11 +84,11 @@ export async function POST(request: NextRequest) {
     }
 
     const { location, street } = params;
-    const cacheKey = buildCacheKey(location, street);
+    const cacheKey = buildWasteCollectionCacheKey(location, street);
 
     cacheService.delete(cacheKey);
 
-    const apiService = new BAVApiService();
+    const apiService = getBAVApiService();
     const data = await apiService.getWasteCollectionData(location, street);
 
     cacheService.set(cacheKey, data);

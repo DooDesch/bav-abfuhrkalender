@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { LAST_ADDRESS_STORAGE_KEY } from '@/lib/config/constants';
 
 export interface LastAddress {
@@ -9,53 +10,64 @@ export interface LastAddress {
 interface AddressState {
   location: string;
   street: string;
+  lastLocation: string;
+  lastStreet: string;
+  // Flag to indicate user wants to select a new address
+  wantsNewAddress: boolean;
   setLocation: (location: string) => void;
   setStreet: (street: string) => void;
   setAddress: (location: string, street: string) => void;
   getLastAddress: () => LastAddress;
   setLastAddress: (location: string, street: string) => void;
+  setWantsNewAddress: (wants: boolean) => void;
 }
 
-function readLastAddressFromStorage(): LastAddress {
-  if (typeof window === 'undefined') {
-    return { location: '', street: '' };
-  }
-  try {
-    const raw = localStorage.getItem(LAST_ADDRESS_STORAGE_KEY);
-    if (!raw) return { location: '', street: '' };
-    const parsed = JSON.parse(raw) as { location?: string; street?: string };
-    return {
-      location: parsed?.location?.trim() ?? '',
-      street: parsed?.street?.trim() ?? '',
-    };
-  } catch {
-    return { location: '', street: '' };
-  }
-}
-
-function writeLastAddressToStorage(location: string, street: string): void {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(
-      LAST_ADDRESS_STORAGE_KEY,
-      JSON.stringify({ location: location.trim(), street: street.trim() })
-    );
-  } catch {
-    // Ignore storage errors
-  }
-}
-
-export const useAddressStore = create<AddressState>((set, get) => ({
-  location: '',
-  street: '',
-  setLocation: (location) => set({ location }),
-  setStreet: (street) => set({ street }),
-  setAddress: (location, street) => set({ location, street }),
-  getLastAddress: () => readLastAddressFromStorage(),
-  setLastAddress: (location, street) => {
-    const trimmedLocation = location.trim();
-    const trimmedStreet = street.trim();
-    writeLastAddressToStorage(trimmedLocation, trimmedStreet);
-    set({ location: trimmedLocation, street: trimmedStreet });
-  },
-}));
+export const useAddressStore = create<AddressState>()(
+  persist(
+    (set, get) => ({
+      location: '',
+      street: '',
+      lastLocation: '',
+      lastStreet: '',
+      wantsNewAddress: false,
+      setLocation: (location) => set({ location }),
+      setStreet: (street) => set({ street }),
+      setAddress: (location, street) => set({ location, street }),
+      getLastAddress: () => ({
+        location: get().lastLocation,
+        street: get().lastStreet,
+      }),
+      setLastAddress: (location, street) => {
+        const trimmedLocation = location.trim();
+        const trimmedStreet = street.trim();
+        set({
+          location: trimmedLocation,
+          street: trimmedStreet,
+          lastLocation: trimmedLocation,
+          lastStreet: trimmedStreet,
+          wantsNewAddress: false, // Reset flag when new address is set
+        });
+      },
+      setWantsNewAddress: (wants) => set({ wantsNewAddress: wants }),
+    }),
+    {
+      name: LAST_ADDRESS_STORAGE_KEY,
+      storage: createJSONStorage(() => {
+        // Return a no-op storage for SSR
+        if (typeof window === 'undefined') {
+          return {
+            getItem: () => null,
+            setItem: () => {},
+            removeItem: () => {},
+          };
+        }
+        return localStorage;
+      }),
+      // Only persist the "last" address fields
+      partialize: (state) => ({
+        lastLocation: state.lastLocation,
+        lastStreet: state.lastStreet,
+      }),
+    }
+  )
+);

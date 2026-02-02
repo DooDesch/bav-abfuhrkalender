@@ -1,18 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { BAVApiService } from '@/lib/services/bav-api.service';
+import { getBAVApiService } from '@/lib/services/bav-api.service';
 import { cacheService } from '@/lib/services/cache.service';
-import { CACHE_TTL } from '@/lib/config/constants';
 import { handleApiError } from '@/lib/utils/error-handler';
 import { buildIcs } from '@/lib/utils/ics-generator';
+import { buildWasteCollectionCacheKey } from '@/lib/utils/cache-keys';
 import type { WasteCalendarResponse } from '@/lib/types/bav-api.types';
 
 export const dynamic = 'force-dynamic';
-
-function buildCacheKey(location: string, street: string): string {
-  const normalizedLocation = location.trim().toLowerCase();
-  const normalizedStreet = street.trim().toLowerCase();
-  return `waste-collection:${normalizedLocation}:${normalizedStreet}`;
-}
 
 function parseIsoDate(value: string | null): Date | null {
   if (!value?.trim()) return null;
@@ -54,12 +48,12 @@ export async function GET(request: NextRequest) {
           )
         : null;
 
-    const cacheKey = buildCacheKey(location, street);
+    const cacheKey = buildWasteCollectionCacheKey(location, street);
     let data: WasteCalendarResponse | undefined = cacheService.get<WasteCalendarResponse>(cacheKey);
     const expiryTimestamp = cacheService.getTtl(cacheKey);
 
     if (!data || expiryTimestamp == null || expiryTimestamp <= Date.now()) {
-      const apiService = new BAVApiService();
+      const apiService = getBAVApiService();
       data = await apiService.getWasteCollectionData(location, street);
       cacheService.set(cacheKey, data);
     }

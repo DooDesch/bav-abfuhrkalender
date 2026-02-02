@@ -1,13 +1,205 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect, useMemo, useRef } from 'react';
-import type { WasteCalendarResponse } from '@/lib/types/bav-api.types';
-import { FRACTION_FILTER_STORAGE_KEY } from '@/lib/config/constants';
+import { useEffect, useMemo } from 'react';
+import { motion } from 'framer-motion';
+import { MapPin, Download, Calendar, ArrowLeft, Clock, Truck } from 'lucide-react';
+import type { WasteCalendarResponse, Appointment, Fraction } from '@/lib/types/bav-api.types';
+import { normalizeAddressKey } from '@/lib/utils/cache-keys';
 import { useAddressStore } from '@/lib/stores/address.store';
+import { useFractionFilter } from '@/lib/hooks/useFractionFilter';
+import { useExportModal } from '@/lib/hooks/useExportModal';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { FadeIn } from '@/components/animations';
 import AppointmentList from './AppointmentList';
 import FractionFilter from './FractionFilter';
-import Modal from './Modal';
+import FractionBadge from './FractionBadge';
+import { cn } from '@/lib/utils';
+
+// Helper to get relative time info
+function getRelativeTimeInfo(dateString: string): { 
+  label: string; 
+  sublabel: string;
+  urgency: 'today' | 'tomorrow' | 'soon' | 'normal';
+} {
+  const date = new Date(dateString);
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  date.setHours(0, 0, 0, 0);
+  
+  const diffTime = date.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  const formattedDate = date.toLocaleDateString('de-DE', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+  
+  if (diffDays === 0) {
+    return { label: 'Heute', sublabel: formattedDate, urgency: 'today' };
+  }
+  if (diffDays === 1) {
+    return { label: 'Morgen', sublabel: formattedDate, urgency: 'tomorrow' };
+  }
+  if (diffDays === 2) {
+    return { label: 'Übermorgen', sublabel: formattedDate, urgency: 'soon' };
+  }
+  if (diffDays > 0 && diffDays <= 7) {
+    return { label: `In ${diffDays} Tagen`, sublabel: formattedDate, urgency: 'soon' };
+  }
+  
+  return { label: formattedDate, sublabel: '', urgency: 'normal' };
+}
+
+// Component for displaying next pickup info
+interface NextPickupCardProps {
+  nextAppointments: Appointment[];
+  fractions: Fraction[];
+  date: string;
+}
+
+function NextPickupCard({ nextAppointments, fractions, date }: NextPickupCardProps) {
+  const timeInfo = getRelativeTimeInfo(date);
+  const fractionsForDate = nextAppointments
+    .map((a) => fractions.find((f) => f.id === a.fractionId))
+    .filter((f): f is Fraction => f !== undefined);
+
+  // Glassmorphism with elegant accent styling
+  const urgencyStyles = {
+    today: {
+      glow: 'shadow-[0_0_40px_-8px_rgba(16,185,129,0.35)]',
+      gradientFrom: 'from-emerald-500/8',
+      gradientTo: 'to-teal-500/5',
+      border: 'ring-1 ring-emerald-500/20',
+      iconBg: 'bg-emerald-500/10 dark:bg-emerald-400/15',
+      iconColor: 'text-emerald-600 dark:text-emerald-400',
+      labelColor: 'text-emerald-600 dark:text-emerald-400',
+      indicator: 'bg-emerald-500',
+    },
+    tomorrow: {
+      glow: 'shadow-[0_0_40px_-8px_rgba(59,130,246,0.3)]',
+      gradientFrom: 'from-blue-500/8',
+      gradientTo: 'to-indigo-500/5',
+      border: 'ring-1 ring-blue-500/20',
+      iconBg: 'bg-blue-500/10 dark:bg-blue-400/15',
+      iconColor: 'text-blue-600 dark:text-blue-400',
+      labelColor: 'text-blue-600 dark:text-blue-400',
+      indicator: 'bg-blue-500',
+    },
+    soon: {
+      glow: 'shadow-[0_0_30px_-8px_rgba(100,116,139,0.25)]',
+      gradientFrom: 'from-slate-500/6',
+      gradientTo: 'to-zinc-500/4',
+      border: 'ring-1 ring-slate-400/20',
+      iconBg: 'bg-slate-500/10 dark:bg-slate-400/15',
+      iconColor: 'text-slate-600 dark:text-slate-400',
+      labelColor: 'text-slate-600 dark:text-slate-400',
+      indicator: 'bg-slate-400',
+    },
+    normal: {
+      glow: '',
+      gradientFrom: 'from-zinc-500/4',
+      gradientTo: 'to-zinc-500/2',
+      border: 'ring-1 ring-zinc-300/20 dark:ring-zinc-600/20',
+      iconBg: 'bg-zinc-500/8 dark:bg-zinc-400/10',
+      iconColor: 'text-zinc-500 dark:text-zinc-400',
+      labelColor: 'text-zinc-700 dark:text-zinc-300',
+      indicator: 'bg-zinc-400',
+    },
+  };
+
+  const styles = urgencyStyles[timeInfo.urgency];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: [0.21, 0.47, 0.32, 0.98] }}
+      className="relative"
+    >
+      {/* Subtle glow effect behind card */}
+      <div className={cn(
+        'absolute inset-0 rounded-2xl transition-shadow duration-500',
+        styles.glow
+      )} />
+      
+      <Card glass className={cn(
+        'relative overflow-hidden',
+        styles.border
+      )}>
+        {/* Subtle gradient overlay */}
+        <div className={cn(
+          'absolute inset-0 bg-gradient-to-br pointer-events-none',
+          styles.gradientFrom,
+          styles.gradientTo
+        )} />
+        
+        <CardContent className="relative p-5 sm:p-6">
+          <div className="flex items-start gap-4">
+            {/* Icon with subtle pulse animation for today */}
+            <div className="relative">
+              <div className={cn(
+                'flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl transition-all duration-300',
+                styles.iconBg
+              )}>
+                <Truck className={cn('h-7 w-7', styles.iconColor)} />
+              </div>
+              {/* Status indicator dot */}
+              <span className={cn(
+                'absolute -top-1 -right-1 h-3 w-3 rounded-full ring-2 ring-white dark:ring-zinc-900',
+                styles.indicator,
+                timeInfo.urgency === 'today' && 'animate-pulse'
+              )} />
+            </div>
+            
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-0.5">
+                Nächste Abfuhr
+              </p>
+              <p className={cn(
+                'text-2xl sm:text-3xl font-bold tracking-tight',
+                styles.labelColor
+              )}>
+                {timeInfo.label}
+              </p>
+              {timeInfo.sublabel && (
+                <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">
+                  {timeInfo.sublabel}
+                </p>
+              )}
+              
+              {/* Fractions with colored indicators */}
+              <div className="flex flex-wrap gap-2 mt-4">
+                {fractionsForDate.map((fraction) => (
+                  <span
+                    key={fraction.id}
+                    className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium bg-white/60 dark:bg-zinc-800/60 backdrop-blur-sm text-zinc-700 dark:text-zinc-300 border border-zinc-200/60 dark:border-zinc-700/50 shadow-sm"
+                  >
+                    <span
+                      className="h-2.5 w-2.5 rounded-full ring-1 ring-black/10"
+                      style={{ backgroundColor: fraction.color || '#888' }}
+                    />
+                    {fraction.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
 
 interface WasteCollectionCalendarProps {
   data: WasteCalendarResponse;
@@ -21,15 +213,17 @@ export default function WasteCollectionCalendar({
   street: streetProp,
 }: WasteCollectionCalendarProps) {
   const setLastAddress = useAddressStore((s) => s.setLastAddress);
+  const setWantsNewAddress = useAddressStore((s) => s.setWantsNewAddress);
 
-  // Save current address as last used when calendar is displayed (e.g. direct link or back)
+  // Save current address as last used when calendar is displayed
   useEffect(() => {
     const loc = locationProp?.trim();
     const str = streetProp?.trim();
     if (!loc || !str) return;
     setLastAddress(loc, str);
   }, [locationProp, streetProp, setLastAddress]);
-  // Get fractions that actually appear in appointments (stable refs for effect deps)
+
+  // Get fractions that actually appear in appointments
   const availableFractionIds = useMemo(
     () => new Set(data.appointments.map((t) => t.fractionId)),
     [data.appointments]
@@ -39,297 +233,265 @@ export default function WasteCollectionCalendar({
     [data.fractions, availableFractionIds]
   );
 
-  // Initialize with all available fractions selected (same on server and first client render to avoid hydration mismatch)
-  const [selectedFractions, setSelectedFractions] = useState<Set<number>>(() =>
-    new Set(availableFractions.map((f) => f.id))
-  );
-
-  // Stable context key so restore runs on mount and when address/data changes
-  const contextKey = useMemo(
-    () =>
-      [locationProp?.trim() ?? '', streetProp?.trim() ?? ''].join('|'),
+  // Normalized address key for per-address storage
+  const storageKey = useMemo(
+    () => normalizeAddressKey(locationProp ?? '', streetProp ?? ''),
     [locationProp, streetProp]
   );
 
-  // Normalized address key for per-address storage (same normalization as cache)
-  const storageKey = useMemo(() => {
-    const loc = locationProp?.trim().toLowerCase() ?? '';
-    const str = streetProp?.trim().toLowerCase() ?? '';
-    return loc && str ? `${loc}|${str}` : '';
-  }, [locationProp, streetProp]);
+  // Use the fraction filter hook
+  const {
+    selectedFractions,
+    setSelectedFractions,
+  } = useFractionFilter({
+    availableFractions,
+    storageKey,
+  });
 
-  // Gate save effect until first restore has run (avoids overwriting localStorage with initial state)
-  const initialRestoreDoneRef = useRef(false);
+  // Use the export modal hook
+  const exportModal = useExportModal({
+    location: locationProp ?? '',
+    street: streetProp ?? '',
+    selectedFractions,
+  });
 
-  // After mount, restore saved filter from localStorage; re-run when context changes
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-  useEffect(() => {
-    if (!mounted || typeof window === 'undefined') return;
-    try {
-      const saved = localStorage.getItem(FRACTION_FILTER_STORAGE_KEY);
-      if (!saved) return;
-      const parsed = JSON.parse(saved) as number[] | Record<string, number[]>;
-      const rawIds: number[] = Array.isArray(parsed)
-        ? parsed
-        : storageKey
-          ? parsed[storageKey] ?? []
-          : [];
-      const savedSet = new Set(rawIds);
-      const filtered = new Set(
-        Array.from(savedSet).filter((id) => availableFractionIds.has(id))
-      );
-      if (filtered.size > 0) {
-        setSelectedFractions(filtered);
-      }
-    } catch {
-      // Ignore errors
-    } finally {
-      initialRestoreDoneRef.current = true;
-    }
-  }, [mounted, contextKey, storageKey, availableFractionIds]);
+  // Get upcoming appointments
+  const upcomingAppointments = useMemo(() => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return data.appointments
+      .filter((t) => {
+        const appointmentDate = new Date(t.date);
+        appointmentDate.setHours(0, 0, 0, 0);
+        return appointmentDate >= now && selectedFractions.has(t.fractionId);
+      })
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [data.appointments, selectedFractions]);
 
-  // Save to localStorage when selection changes (per-address)
-  useEffect(() => {
-    if (!initialRestoreDoneRef.current || typeof window === 'undefined' || !storageKey) return;
-    try {
-      const raw = localStorage.getItem(FRACTION_FILTER_STORAGE_KEY);
-      let byAddress: Record<string, number[]> = {};
-      if (typeof raw === 'string') {
-        try {
-          const parsed = JSON.parse(raw);
-          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-            byAddress = parsed as Record<string, number[]>;
-          }
-        } catch {
-          // Invalid JSON or legacy array format, start fresh
-        }
-      }
-      byAddress[storageKey] = Array.from(selectedFractions);
-      localStorage.setItem(
-        FRACTION_FILTER_STORAGE_KEY,
-        JSON.stringify(byAddress)
-      );
-    } catch {
-      // Ignore errors (e.g., localStorage full)
-    }
-  }, [selectedFractions, storageKey]);
+  const upcomingCount = upcomingAppointments.length;
 
-  // Clean up selection when available fractions change (e.g. new address)
-  useEffect(() => {
-    const currentAvailableIds = new Set(availableFractions.map((f) => f.id));
-    const filtered = new Set(
-      Array.from(selectedFractions).filter((id) =>
-        currentAvailableIds.has(id)
-      )
+  // Get next pickup date and its appointments
+  const nextPickup = useMemo(() => {
+    if (upcomingAppointments.length === 0) return null;
+    
+    const nextDate = upcomingAppointments[0].date;
+    const appointmentsOnNextDate = upcomingAppointments.filter(
+      (a) => a.date === nextDate
     );
-    if (filtered.size === 0) {
-      setSelectedFractions(new Set(availableFractions.map((f) => f.id)));
-    } else if (filtered.size !== selectedFractions.size) {
-      setSelectedFractions(filtered);
-    }
-  }, [availableFractions]);
-
-  // Export: date range (default today to +1 year)
-  const defaultDateFrom = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d.toISOString().slice(0, 10);
-  }, []);
-  const defaultDateTo = useMemo(() => {
-    const d = new Date();
-    d.setFullYear(d.getFullYear() + 1);
-    d.setHours(0, 0, 0, 0);
-    return d.toISOString().slice(0, 10);
-  }, []);
-  const [dateFrom, setDateFrom] = useState(defaultDateFrom);
-  const [dateTo, setDateTo] = useState(defaultDateTo);
-  const exportValid = dateFrom <= dateTo;
-
-  // Export modal: own fraction selection (synced when modal opens)
-  const [exportModalOpen, setExportModalOpen] = useState(false);
-  const [exportSelectedFractions, setExportSelectedFractions] = useState<
-    Set<number>
-  >(() => new Set());
-  const exportTriggerRef = useRef<HTMLButtonElement>(null);
-
-  // When modal opens, initialize export fractions from current calendar filter
-  useEffect(() => {
-    if (exportModalOpen) {
-      setExportSelectedFractions(new Set(selectedFractions));
-    }
-  }, [exportModalOpen, selectedFractions]);
-
-  const handleExportModalClose = () => {
-    setExportModalOpen(false);
-    exportTriggerRef.current?.focus();
-  };
-
-  const modalExportUrl =
-    locationProp &&
-    streetProp &&
-    exportValid &&
-    exportSelectedFractions.size > 0
-      ? `/api/export/ics?location=${encodeURIComponent(locationProp)}&street=${encodeURIComponent(streetProp)}&dateFrom=${encodeURIComponent(dateFrom)}&dateTo=${encodeURIComponent(dateTo)}&fractions=${Array.from(exportSelectedFractions).join(',')}`
-      : null;
+    
+    return {
+      date: nextDate,
+      appointments: appointmentsOnNextDate,
+    };
+  }, [upcomingAppointments]);
 
   return (
-    <div className="w-full space-y-6">
-      {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 sm:text-3xl">
-          Abfuhrkalender
-        </h1>
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-          <div className="text-base text-zinc-600 dark:text-zinc-400 sm:text-lg">
-            <span className="font-semibold">{data.street.name}</span>
-            <span className="mx-2">•</span>
-            <span>{data.location.name}</span>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="w-full space-y-4 sm:space-y-6"
+    >
+      {/* Address Header - Compact on mobile */}
+      <FadeIn>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-1">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-primary shrink-0" />
+            <div className="text-sm sm:text-base">
+              <span className="font-semibold text-zinc-900 dark:text-zinc-50">{data.street.name}</span>
+              <span className="text-zinc-500 dark:text-zinc-400"> • {data.location.name}</span>
+            </div>
           </div>
-          <Link
-            href="/?form=1"
-            className="flex min-h-[44px] cursor-pointer items-center self-start rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
-          >
-            Andere Adresse suchen
+          <Link href="/?form=1" onClick={() => setWantsNewAddress(true)}>
+            <Button variant="outline" size="sm" className="gap-2 w-full sm:w-auto">
+              <ArrowLeft className="h-4 w-4" />
+              <span className="sm:inline">Andere Adresse</span>
+            </Button>
           </Link>
         </div>
-        {data.houseNumbers.length > 0 && (
-          <p className="text-sm text-zinc-500 dark:text-zinc-500">
-            {data.houseNumbers.length} Hausnummer{data.houseNumbers.length !== 1 ? 'n' : ''} verfügbar
-          </p>
-        )}
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          Termine für die gewählte Adresse. Sie können die Adresse oben ändern.
-        </p>
-      </div>
+      </FadeIn>
 
-      {/* Appointments */}
-      <div className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
-            Abfuhrtermine
-          </h2>
-          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:gap-3">
-            <FractionFilter
-              fractions={availableFractions}
-              selectedFractions={selectedFractions}
-              onFilterChange={setSelectedFractions}
-            />
-            <button
-              ref={exportTriggerRef}
-              type="button"
-              onClick={() => setExportModalOpen(true)}
-              className="flex min-h-[44px] cursor-pointer items-center gap-2 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-              aria-label="In Kalender exportieren"
-            >
-              <svg
-                className="h-4 w-4 shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-              In Kalender exportieren
-            </button>
-          </div>
-        </div>
-
-        <Modal
-          open={exportModalOpen}
-          onClose={handleExportModalClose}
-          title="In Kalender exportieren"
-        >
-          <p className="mb-4 text-zinc-600 dark:text-zinc-400">
-            Wählen Sie die Fraktionen und den Zeitraum für den Export.
-          </p>
-          <div className="mb-4">
-            <span className="mb-2 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
-              Fraktionen für die .ics-Datei
-            </span>
-            <FractionFilter
-              fractions={availableFractions}
-              selectedFractions={exportSelectedFractions}
-              onFilterChange={setExportSelectedFractions}
-            />
-          </div>
-          <div className="mb-4 flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
-              <span>Von</span>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
-              />
-            </label>
-            <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
-              <span>Bis</span>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
-              />
-            </label>
-          </div>
-          {!exportValid && (
-            <p className="mb-3 text-xs text-amber-600 dark:text-amber-400">
-              Bitte wählen Sie ein „Von“-Datum vor dem „Bis“-Datum.
-            </p>
-          )}
-          {modalExportUrl ? (
-            <a
-              href={modalExportUrl}
-              download="abfuhrkalender.ics"
-              className="inline-flex min-h-[44px] cursor-pointer items-center rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-            >
-              .ics herunterladen
-            </a>
-          ) : (
-            <span className="inline-flex min-h-[44px] cursor-not-allowed items-center rounded-md border border-zinc-300 bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-500">
-              .ics herunterladen
-            </span>
-          )}
-        </Modal>
-
-        <AppointmentList
-          appointments={data.appointments}
+      {/* Next Pickup - Most important info first */}
+      {nextPickup && (
+        <NextPickupCard
+          nextAppointments={nextPickup.appointments}
           fractions={data.fractions}
-          selectedFractions={selectedFractions}
+          date={nextPickup.date}
         />
-      </div>
+      )}
 
-      {/* Info */}
-      <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
-        <h3 className="mb-2 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-          Verfügbare Abfallsorten
-        </h3>
-        {data.fractions.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {data.fractions.map((fraction) => (
-              <span
-                key={fraction.id}
-                className="text-xs text-zinc-600 dark:text-zinc-400"
+      {/* Stats Card - Secondary info */}
+      <FadeIn delay={0.1}>
+        <Card glass className="overflow-hidden">
+          <CardContent className="p-4">
+            {/* Stats - Compact grid */}
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
+              <div className="rounded-xl bg-green-50 dark:bg-green-900/20 p-2.5 sm:p-3 text-center">
+                <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
+                  {upcomingCount}
+                </p>
+                <p className="text-[10px] sm:text-xs text-green-700 dark:text-green-300">
+                  Termine
+                </p>
+              </div>
+              <div className="rounded-xl bg-blue-50 dark:bg-blue-900/20 p-2.5 sm:p-3 text-center">
+                <p className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  {availableFractions.length}
+                </p>
+                <p className="text-[10px] sm:text-xs text-blue-700 dark:text-blue-300">
+                  Abfallarten
+                </p>
+              </div>
+              {data.houseNumbers.length > 0 ? (
+                <div className="rounded-xl bg-purple-50 dark:bg-purple-900/20 p-2.5 sm:p-3 text-center">
+                  <p className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400">
+                    {data.houseNumbers.length}
+                  </p>
+                  <p className="text-[10px] sm:text-xs text-purple-700 dark:text-purple-300">
+                    Hausnr.
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-xl bg-zinc-50 dark:bg-zinc-800/50 p-2.5 sm:p-3 text-center">
+                  <p className="text-xl sm:text-2xl font-bold text-zinc-600 dark:text-zinc-400">
+                    ∞
+                  </p>
+                  <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-500">
+                    Alle Hausnr.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Available fractions */}
+            <div className="flex flex-wrap gap-1.5">
+              {availableFractions.map((fraction) => (
+                <FractionBadge key={fraction.id} fraction={fraction} size="sm" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </FadeIn>
+
+      {/* Appointments Section */}
+      <FadeIn delay={0.2}>
+        <div className="space-y-4">
+          {/* Toolbar */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-primary" />
+              Alle Termine
+            </h2>
+            
+            <div className="flex flex-wrap items-center gap-2">
+              <FractionFilter
+                fractions={availableFractions}
+                selectedFractions={selectedFractions}
+                onFilterChange={setSelectedFractions}
+              />
+              
+              <Button
+                variant="outline"
+                onClick={exportModal.open}
+                className="gap-2"
               >
-                {fraction.name}
-              </span>
-            ))}
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">Exportieren</span>
+              </Button>
+            </div>
           </div>
-        ) : (
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            Keine Abfallsorten verfügbar
-          </p>
-        )}
-      </div>
-    </div>
+
+          {/* Appointment List */}
+          <AppointmentList
+            appointments={data.appointments}
+            fractions={data.fractions}
+            selectedFractions={selectedFractions}
+          />
+        </div>
+      </FadeIn>
+
+      {/* Export Dialog */}
+      <Dialog open={exportModal.isOpen} onOpenChange={(open) => !open && exportModal.close()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5 text-primary" />
+              In Kalender exportieren
+            </DialogTitle>
+            <DialogDescription>
+              Wähle die Abfallarten und den Zeitraum für den Export.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Fraction Selection */}
+            <div>
+              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
+                Abfallarten für .ics-Datei
+              </label>
+              <FractionFilter
+                fractions={availableFractions}
+                selectedFractions={exportModal.exportSelectedFractions}
+                onFilterChange={exportModal.setExportSelectedFractions}
+                inline
+              />
+            </div>
+
+            {/* Date Range */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
+                  Von
+                </label>
+                <input
+                  type="date"
+                  value={exportModal.dateFrom}
+                  onChange={(e) => exportModal.setDateFrom(e.target.value)}
+                  className="flex h-10 w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-900/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
+                  Bis
+                </label>
+                <input
+                  type="date"
+                  value={exportModal.dateTo}
+                  onChange={(e) => exportModal.setDateTo(e.target.value)}
+                  className="flex h-10 w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-900/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+            </div>
+
+            {!exportModal.isDateRangeValid && (
+              <p className="text-sm text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                Das „Von"-Datum muss vor dem „Bis"-Datum liegen.
+              </p>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={exportModal.close}>
+              Abbrechen
+            </Button>
+            {exportModal.exportUrl ? (
+              <Button asChild className="gap-2">
+                <a href={exportModal.exportUrl} download="abfuhrkalender.ics">
+                  <Download className="h-4 w-4" />
+                  .ics herunterladen
+                </a>
+              </Button>
+            ) : (
+              <Button disabled className="gap-2">
+                <Download className="h-4 w-4" />
+                .ics herunterladen
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </motion.div>
   );
 }

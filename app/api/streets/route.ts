@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { BAVApiService } from '@/lib/services/bav-api.service';
+import { unstable_cache } from 'next/cache';
+import { getBAVApiService } from '@/lib/services/bav-api.service';
 import { handleApiError } from '@/lib/utils/error-handler';
+import { CACHE_TTL } from '@/lib/config/constants';
 
-export const dynamic = 'force-dynamic';
+// Cache streets by location ID
+const getCachedStreets = unstable_cache(
+  async (locationId: number) => {
+    const apiService = getBAVApiService();
+    return apiService.getStreets(locationId);
+  },
+  ['streets'],
+  { revalidate: CACHE_TTL, tags: ['streets'] }
+);
 
 /**
  * GET /api/streets?location=<Ort>
@@ -23,9 +33,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const apiService = new BAVApiService();
+    const apiService = getBAVApiService();
     const location = await apiService.getLocationByName(locationName);
-    const streets = await apiService.getStreets(location.id);
+    const streets = await getCachedStreets(location.id);
     return NextResponse.json({ success: true, data: streets });
   } catch (error) {
     return handleApiError(error, 'Failed to fetch streets');

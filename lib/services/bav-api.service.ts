@@ -8,9 +8,32 @@ import type {
   WasteCalendarResponse,
 } from '@/lib/types/bav-api.types';
 import { BAVApiError } from '@/lib/types/bav-api.types';
+import {
+  parseLocations,
+  parseStreets,
+  parseFractions,
+  parseAppointments,
+  type StreetResponse,
+  type FractionResponse,
+  type AppointmentResponse,
+} from '@/lib/schemas/bav-api.schemas';
+
+// Singleton instance
+let instance: BAVApiService | null = null;
+
+/**
+ * Get the singleton BAVApiService instance
+ * This ensures we reuse the same instance across all calls
+ */
+export function getBAVApiService(): BAVApiService {
+  if (!instance) {
+    instance = new BAVApiService();
+  }
+  return instance;
+}
 
 export class BAVApiService {
-  private baseUrl: string;
+  private readonly baseUrl: string;
 
   constructor(baseUrl: string = BAV_API_BASE_URL) {
     this.baseUrl = baseUrl;
@@ -32,7 +55,8 @@ export class BAVApiService {
         );
       }
 
-      return await response.json();
+      const data: unknown = await response.json();
+      return parseLocations(data);
     } catch (error) {
       if (error instanceof BAVApiError) {
         throw error;
@@ -84,28 +108,21 @@ export class BAVApiService {
         );
       }
 
-      const data = await response.json();
-      if (!Array.isArray(data)) {
-        throw new BAVApiError(
-          `Invalid response format from streets endpoint: expected array, got ${typeof data}`,
-          500
-        );
-      }
+      const data: unknown = await response.json();
+      const parsedStreets = parseStreets(data);
 
-      // Map the response to our Street type (API returns more fields, e.g. hausNrList)
-      return data.map((item: any) => {
+      // Map the parsed response to our Street type
+      return parsedStreets.map((item: StreetResponse) => {
         const rawHouseList = item.hausNrList ?? item.hausnummern ?? item.hausnummernList ?? [];
-        const houseNumbers: HouseNumber[] = Array.isArray(rawHouseList)
-          ? rawHouseList.map((entry: any, index: number) => ({
-              id: entry.id ?? index,
-              name: String(entry.name ?? entry.nummer ?? entry.hausnummer ?? entry.value ?? entry.id ?? ''),
-              streetId: item.id,
-            }))
-          : [];
+        const houseNumbers: HouseNumber[] = rawHouseList.map((entry, index) => ({
+          id: entry.id ?? index,
+          name: String(entry.name ?? entry.nummer ?? entry.hausnummer ?? entry.value ?? entry.id ?? ''),
+          streetId: item.id,
+        }));
         return {
           id: item.id,
           name: item.name,
-          locationId: item.ort?.id || locationId,
+          locationId: item.ort?.id ?? locationId,
           houseNumbers: houseNumbers.length > 0 ? houseNumbers : undefined,
         };
       });
@@ -180,17 +197,12 @@ export class BAVApiService {
         );
       }
 
-      const data = await response.json();
-      if (!Array.isArray(data)) {
-        throw new BAVApiError(
-          `Invalid response format from fractions endpoint: expected array, got ${typeof data}`,
-          500
-        );
-      }
+      const data: unknown = await response.json();
+      const parsedFractions = parseFractions(data);
 
       // Map the API response to our Fraction type
       // API uses farbeRgb (hex without #), we convert to color with #
-      return data.map((item: any) => ({
+      return parsedFractions.map((item: FractionResponse) => ({
         id: item.id,
         name: item.name,
         color: item.farbeRgb ? `#${item.farbeRgb}` : undefined,
@@ -213,7 +225,7 @@ export class BAVApiService {
    */
   async getCollectionDates(
     streetId: number,
-    houseNumberId?: number
+    _houseNumberId?: number
   ): Promise<Appointment[]> {
     try {
       // Use the correct endpoint format: /strassen/{streetId}/termine
@@ -234,19 +246,14 @@ export class BAVApiService {
         );
       }
 
-      const data = await response.json();
-      if (!Array.isArray(data)) {
-        throw new BAVApiError(
-          `Invalid response format from collection dates endpoint: expected array, got ${typeof data}`,
-          500
-        );
-      }
+      const data: unknown = await response.json();
+      const parsedAppointments = parseAppointments(data);
 
       // Map the API response to our Appointment type
-      return data.map((item: any) => ({
+      return parsedAppointments.map((item: AppointmentResponse) => ({
         date: item.datum,
         fractionName: '', // Will be filled from fractions
-        fractionId: item.bezirk?.fraktionId || 0,
+        fractionId: item.bezirk?.fraktionId ?? 0,
       }));
     } catch (error) {
       if (error instanceof BAVApiError) {

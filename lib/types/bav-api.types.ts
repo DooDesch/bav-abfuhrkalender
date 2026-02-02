@@ -5,6 +5,16 @@ export interface Location {
   name: string;
 }
 
+export interface Coordinates {
+  lat: number;
+  lng: number;
+}
+
+export interface LocationWithCoords extends Location {
+  coords?: Coordinates;
+  distance?: number; // Distance in km from user
+}
+
 export interface Street {
   id: number;
   name: string;

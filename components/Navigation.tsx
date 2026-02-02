@@ -5,9 +5,9 @@ import { usePathname } from 'next/navigation';
 import { useAddressStore } from '@/lib/stores/address.store';
 import { createStreetSlug } from '@/lib/utils/seo';
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { Calendar, Code2, MapPin, Recycle } from 'lucide-react';
+import { Calendar, Code2, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Logo } from '@/components/Logo';
 import { cn } from '@/lib/utils';
 
 // Module-level flag to track if initial animation has played
@@ -84,15 +84,7 @@ export default function Navigation() {
               href={calendarHref}
               className="group flex items-center gap-2"
             >
-              <div className="relative h-9 w-9 rounded-xl shadow-lg shadow-green-500/25">
-                <motion.div
-                  whileHover={{ rotate: 360 }}
-                  transition={{ duration: 0.6, ease: 'easeInOut' }}
-                  className="flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-emerald-600"
-                >
-                  <Recycle className="h-5 w-5 text-white" />
-                </motion.div>
-              </div>
+              <Logo size={36} animate />
               <span className="text-lg tracking-tight text-zinc-900 dark:text-zinc-50">
                 <span className="font-bold">Dein</span>
                 <span className="hidden sm:inline text-zinc-500 dark:text-zinc-400 font-normal ml-1">

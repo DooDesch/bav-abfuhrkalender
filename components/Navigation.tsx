@@ -93,10 +93,10 @@ export default function Navigation() {
                   <Recycle className="h-5 w-5 text-white" />
                 </motion.div>
               </div>
-              <span className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                Abfuhr
+              <span className="text-lg tracking-tight text-zinc-900 dark:text-zinc-50">
+                <span className="font-bold">Dein</span>
                 <span className="hidden sm:inline text-zinc-500 dark:text-zinc-400 font-normal ml-1">
-                  Kalender
+                  Abfuhrkalender
                 </span>
               </span>
             </Link>

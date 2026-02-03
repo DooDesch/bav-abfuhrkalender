@@ -40,3 +40,9 @@ export function buildCacheRefreshCooldownKey(
   const normalizedStreet = street.trim().toLowerCase();
   return `refresh-cooldown:${normalizedLocation}:${normalizedStreet}`;
 }
+
+/**
+ * Cache key for the sitemap entries
+ * Used to cache the complete sitemap to avoid regenerating it on every request
+ */
+export const SITEMAP_CACHE_KEY = 'sitemap:entries';

@@ -4,8 +4,8 @@ import { getBAVApiService } from '@/lib/services/bav-api.service';
 import { cacheService } from '@/lib/services/cache.service';
 import { SITEMAP_CACHE_KEY } from '@/lib/utils/cache-keys';
 
-/** Sitemap cache TTL: 24 hours in seconds */
-const SITEMAP_CACHE_TTL = 24 * 60 * 60;
+/** Sitemap cache TTL: 1 week in seconds */
+const SITEMAP_CACHE_TTL = 7 * 24 * 60 * 60;
 
 /**
  * Generate sitemap with all locations and streets

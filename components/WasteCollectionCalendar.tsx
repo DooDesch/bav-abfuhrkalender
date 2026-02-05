@@ -206,12 +206,18 @@ interface WasteCollectionCalendarProps {
   data: WasteCalendarResponse;
   location?: string;
   street?: string;
+  /** House number display name (e.g., "2") */
+  houseNumber?: string;
+  /** House number API ID for persistence */
+  houseNumberId?: string;
 }
 
 export default function WasteCollectionCalendar({
   data,
   location: locationProp,
   street: streetProp,
+  houseNumber: houseNumberProp,
+  houseNumberId: houseNumberIdProp,
 }: WasteCollectionCalendarProps) {
   const setLastAddress = useAddressStore((s) => s.setLastAddress);
 
@@ -220,8 +226,9 @@ export default function WasteCollectionCalendar({
     const loc = locationProp?.trim();
     const str = streetProp?.trim();
     if (!loc || !str) return;
-    setLastAddress(loc, str);
-  }, [locationProp, streetProp, setLastAddress]);
+    // Include house number info so it persists when navigating back
+    setLastAddress(loc, str, houseNumberProp, houseNumberIdProp);
+  }, [locationProp, streetProp, houseNumberProp, houseNumberIdProp, setLastAddress]);
 
   // Get fractions that actually appear in appointments
   const availableFractionIds = useMemo(
@@ -346,7 +353,16 @@ export default function WasteCollectionCalendar({
                   Abfallarten
                 </p>
               </div>
-              {data.houseNumbers.length > 0 ? (
+              {houseNumberProp ? (
+                <div className="rounded-xl bg-purple-50 dark:bg-purple-900/20 p-2.5 sm:p-3 text-center">
+                  <p className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400">
+                    {houseNumberProp}
+                  </p>
+                  <p className="text-[10px] sm:text-xs text-purple-700 dark:text-purple-300">
+                    Hausnr.
+                  </p>
+                </div>
+              ) : data.houseNumbers.length > 0 ? (
                 <div className="rounded-xl bg-purple-50 dark:bg-purple-900/20 p-2.5 sm:p-3 text-center">
                   <p className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400">
                     {data.houseNumbers.length}

@@ -1,0 +1,225 @@
+{
+  "Axstedt": {
+    "f_id_kommune": "2652"
+  },
+  "Grasberg - Adolphsdorf": {
+    "f_id_kommune": "2644",
+    "f_id_bezirk": "3268"
+  },
+  "Grasberg - Dannenberg": {
+    "f_id_kommune": "2644",
+    "f_id_bezirk": "4232"
+  },
+  "Grasberg": {
+    "f_id_kommune": "2644",
+    "f_id_bezirk": "37514"
+  },
+  "Grasberg - Grasdorf": {
+    "f_id_kommune": "2644",
+    "f_id_bezirk": "7153"
+  },
+  "Grasberg - Huxfeld": {
+    "f_id_kommune": "2644",
+    "f_id_bezirk": "2086"
+  },
+  "Grasberg - Otterstein": {
+    "f_id_kommune": "2644",
+    "f_id_bezirk": "11277"
+  },
+  "Grasberg - Rautendorf": {
+    "f_id_kommune": "2644",
+    "f_id_bezirk": "9212"
+  },
+  "Grasberg - Schmalenbeck": {
+    "f_id_kommune": "2644",
+    "f_id_bezirk": "14033"
+  },
+  "Grasberg - Seehausen": {
+    "f_id_kommune": "2644",
+    "f_id_bezirk": "14889"
+  },
+  "Grasberg - Tüschendorf": {
+    "f_id_kommune": "2644",
+    "f_id_bezirk": "15601"
+  },
+  "Hambergen": {
+    "f_id_kommune": "2649"
+  },
+  "Holste": {
+    "f_id_kommune": "2653"
+  },
+  "Lilienthal - Heidberg": {
+    "f_id_kommune": "2645",
+    "f_id_bezirk": "476"
+  },
+  "Lilienthal": {
+    "f_id_kommune": "2645",
+    "f_id_bezirk": "280"
+  },
+  "Lilienthal - Seebergen": {
+    "f_id_kommune": "2645",
+    "f_id_bezirk": "2370"
+  },
+  "Lilienthal - St. Jürgen": {
+    "f_id_kommune": "2645",
+    "f_id_bezirk": "3020"
+  },
+  "Lilienthal - Worphausen": {
+    "f_id_kommune": "2645",
+    "f_id_bezirk": "4353"
+  },
+  "Lübberstedt": {
+    "f_id_kommune": "2654"
+  },
+  "Osterholz-Scharmbeck - Buschhausen": {
+    "f_id_kommune": "2647",
+    "f_id_bezirk": "41650"
+  },
+  "Osterholz-Scharmbeck - Freißenbüttel": {
+    "f_id_kommune": "2647",
+    "f_id_bezirk": "11562"
+  },
+  "Osterholz-Scharmbeck - Garlstedt": {
+    "f_id_kommune": "2647",
+    "f_id_bezirk": "11725"
+  },
+  "Osterholz-Scharmbeck - Heilshorn": {
+    "f_id_kommune": "2647",
+    "f_id_bezirk": "12270"
+  },
+  "Osterholz-Scharmbeck - Hülseberg": {
+    "f_id_kommune": "2647",
+    "f_id_bezirk": "12959"
+  },
+  "Osterholz-Scharmbeck - Ohlenstedt": {
+    "f_id_kommune": "2647",
+    "f_id_bezirk": "13179"
+  },
+  "Osterholz-Scharmbeck": {
+    "f_id_kommune": "2647",
+    "f_id_bezirk": "5207"
+  },
+  "Osterholz-Scharmbeck - Pennigbüttel": {
+    "f_id_kommune": "2647",
+    "f_id_bezirk": "6858"
+  },
+  "Osterholz-Scharmbeck - Sandhausen": {
+    "f_id_kommune": "2647",
+    "f_id_bezirk": "14109"
+  },
+  "Osterholz-Scharmbeck - Scharmbeckstotel": {
+    "f_id_kommune": "2647",
+    "f_id_bezirk": "12812"
+  },
+  "Osterholz-Scharmbeck - Teufelsmoor": {
+    "f_id_kommune": "2647",
+    "f_id_bezirk": "15443"
+  },
+  "Osterholz-Scharmbeck - Westerbeck": {
+    "f_id_kommune": "2647",
+    "f_id_bezirk": "41662"
+  },
+  "Ritterhude - Ihlpohl": {
+    "f_id_kommune": "2648",
+    "f_id_bezirk": "16565"
+  },
+  "Ritterhude - Lesumstotel": {
+    "f_id_kommune": "2648",
+    "f_id_bezirk": "16832"
+  },
+  "Ritterhude - Platjenwerbe": {
+    "f_id_kommune": "2648",
+    "f_id_bezirk": "19232"
+  },
+  "Ritterhude": {
+    "f_id_kommune": "2648",
+    "f_id_bezirk": "15524"
+  },
+  "Ritterhude - Stendorf": {
+    "f_id_kommune": "2648",
+    "f_id_bezirk": "21130"
+  },
+  "Ritterhude - Werschenrege": {
+    "f_id_kommune": "2648",
+    "f_id_bezirk": "21277"
+  },
+  "Schwanewede - Aschwarden": {
+    "f_id_kommune": "2650",
+    "f_id_bezirk": "29943"
+  },
+  "Schwanewede - Beckedorf": {
+    "f_id_kommune": "2650",
+    "f_id_bezirk": "30090"
+  },
+  "Schwanewede - Brundorf": {
+    "f_id_kommune": "2650",
+    "f_id_bezirk": "30620"
+  },
+  "Schwanewede - Eggestedt": {
+    "f_id_kommune": "2650",
+    "f_id_bezirk": "30743"
+  },
+  "Schwanewede - Hinnebeck": {
+    "f_id_kommune": "2650",
+    "f_id_bezirk": "30814"
+  },
+  "Schwanewede - Leuchtenburg": {
+    "f_id_kommune": "2650",
+    "f_id_bezirk": "30650"
+  },
+  "Schwanewede - Löhnhorst": {
+    "f_id_kommune": "2650",
+    "f_id_bezirk": "30649"
+  },
+  "Schwanewede - Meyenburg": {
+    "f_id_kommune": "2650",
+    "f_id_bezirk": "29783"
+  },
+  "Schwanewede - Neuenkirchen": {
+    "f_id_kommune": "2650",
+    "f_id_bezirk": "32284"
+  },
+  "Schwanewede - Rade": {
+    "f_id_kommune": "2650",
+    "f_id_bezirk": "33498"
+  },
+  "Schwanewede": {
+    "f_id_kommune": "2650",
+    "f_id_bezirk": "20041"
+  },
+  "Vollersode": {
+    "f_id_kommune": "2651"
+  },
+  "Worpswede - Hüttenbusch": {
+    "f_id_kommune": "2646",
+    "f_id_bezirk": "35410"
+  },
+  "Worpswede - Mevenstedt": {
+    "f_id_kommune": "2646",
+    "f_id_bezirk": "36107"
+  },
+  "Worpswede - Neu St. Jürgen": {
+    "f_id_kommune": "2646",
+    "f_id_bezirk": "35411"
+  },
+  "Worpswede - Ostersode": {
+    "f_id_kommune": "2646",
+    "f_id_bezirk": "36498"
+  },
+  "Worpswede - Schlußdorf": {
+    "f_id_kommune": "2646",
+    "f_id_bezirk": "36590"
+  },
+  "Worpswede - Überhamm": {
+    "f_id_kommune": "2646",
+    "f_id_bezirk": "4041"
+  },
+  "Worpswede - Waakhausen": {
+    "f_id_kommune": "2646",
+    "f_id_bezirk": "36742"
+  },
+  "Worpswede": {
+    "f_id_kommune": "2646",
+    "f_id_bezirk": "33581"
+  }
+}

@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { getBaseUrl, createStreetSlug } from '@/lib/utils/seo';
-import { getBAVApiService } from '@/lib/services/bav-api.service';
+import { getAllLocations, getStreets } from '@/lib/services/provider-registry';
 import { cacheService } from '@/lib/services/cache.service';
 import { SITEMAP_CACHE_KEY } from '@/lib/utils/cache-keys';
 
@@ -8,9 +8,9 @@ import { SITEMAP_CACHE_KEY } from '@/lib/utils/cache-keys';
 const SITEMAP_CACHE_TTL = 7 * 24 * 60 * 60;
 
 /**
- * Generate sitemap with all locations and streets
+ * Generate sitemap with all locations and streets from all providers
  * This enables Google to discover and index all pages
- * Results are cached for 24 hours to improve response time for crawlers
+ * Results are cached for 1 week to improve response time for crawlers
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Check cache first
@@ -20,7 +20,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   const baseUrl = getBaseUrl();
-  const apiService = getBAVApiService();
 
   const entries: MetadataRoute.Sitemap = [
     {
@@ -32,7 +31,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   try {
-    const locations = await apiService.getLocations();
+    // Get locations from all providers
+    const locations = await getAllLocations();
 
     // Add all locations and their streets
     for (const location of locations) {
@@ -46,9 +46,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.8,
       });
 
-      // Fetch streets for this location
+      // Fetch streets for this location (provider-agnostic)
       try {
-        const streets = await apiService.getStreets(location.id);
+        const streets = await getStreets(location.name);
 
         for (const street of streets) {
           const streetSlug = createStreetSlug(street.name);
@@ -68,7 +68,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error('Failed to fetch locations for sitemap:', error);
   }
 
-  // Cache the generated sitemap entries for 24 hours
+  // Cache the generated sitemap entries
   cacheService.set(SITEMAP_CACHE_KEY, entries, SITEMAP_CACHE_TTL);
 
   return entries;

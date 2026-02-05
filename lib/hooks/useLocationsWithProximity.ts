@@ -14,6 +14,8 @@ let moduleUserCoords: Coordinates | null = null;
 let moduleUserCoordsLoaded = false;
 let moduleLocationCoords: Record<string, Coordinates | null> = {};
 let moduleLocationCoordsLoaded = false;
+// Pending request promise to prevent duplicate concurrent fetches
+let pendingCoordsRequest: Promise<Record<string, Coordinates | null>> | null = null;
 
 interface CachedData<T> {
   data: T;
@@ -71,7 +73,7 @@ function getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): 
 
 /**
  * Fetch coordinates for multiple locations via batch API
- * Returns cached data if available
+ * Returns cached data if available, prevents duplicate concurrent requests
  */
 async function fetchCoordinates(
   locations: Location[]
@@ -89,26 +91,38 @@ async function fetchCoordinates(
     return cached;
   }
 
-  try {
-    const response = await fetch('/api/geocode', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ locations: locations.map((l) => l.name) }),
-    });
-
-    const data = await response.json();
-    if (data.success) {
-      // Cache the results
-      moduleLocationCoords = data.data;
-      moduleLocationCoordsLoaded = true;
-      setCachedData(LOCATION_COORDS_CACHE_KEY, data.data);
-      return data.data;
-    }
-    return {};
-  } catch (error) {
-    console.error('Failed to fetch coordinates:', error);
-    return {};
+  // If there's already a pending request, wait for it
+  if (pendingCoordsRequest) {
+    return pendingCoordsRequest;
   }
+
+  // Create and store the pending request
+  pendingCoordsRequest = (async () => {
+    try {
+      const response = await fetch('/api/geocode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ locations: locations.map((l) => l.name) }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        // Cache the results
+        moduleLocationCoords = data.data;
+        moduleLocationCoordsLoaded = true;
+        setCachedData(LOCATION_COORDS_CACHE_KEY, data.data);
+        return data.data;
+      }
+      return {};
+    } catch (error) {
+      console.error('Failed to fetch coordinates:', error);
+      return {};
+    } finally {
+      pendingCoordsRequest = null;
+    }
+  })();
+
+  return pendingCoordsRequest;
 }
 
 /**
@@ -177,6 +191,13 @@ interface UseLocationsWithProximityReturn {
   userCoords: Coordinates | null;
   /** Error if request failed */
   error: Error | undefined;
+  /** Trigger geolocation request (only needed if autoRequest is false) */
+  requestGeolocation: () => void;
+}
+
+interface UseLocationsWithProximityOptions {
+  /** Whether to automatically request geolocation on mount (default: false) */
+  autoRequestGeolocation?: boolean;
 }
 
 /**
@@ -184,26 +205,47 @@ interface UseLocationsWithProximityReturn {
  * Falls back to alphabetical order if geolocation is denied
  * Uses module-level and sessionStorage caching to prevent re-fetching on navigation
  */
-export function useLocationsWithProximity(): UseLocationsWithProximityReturn {
+export function useLocationsWithProximity(
+  options: UseLocationsWithProximityOptions = {}
+): UseLocationsWithProximityReturn {
+  const { autoRequestGeolocation = false } = options;
+  
   const { locations: originalLocations, isLoading, error } = useLocations();
   // Initialize from module cache if available
   const [userCoords, setUserCoords] = useState<Coordinates | null>(() => moduleUserCoords);
   const [locationCoords, setLocationCoords] = useState<Record<string, Coordinates | null>>(
     () => moduleLocationCoords
   );
-  const [isGeolocating, setIsGeolocating] = useState(() => !moduleUserCoordsLoaded);
+  const [isGeolocating, setIsGeolocating] = useState(false);
   const [coordsLoaded, setCoordsLoaded] = useState(() => moduleLocationCoordsLoaded);
+  const [geolocationRequested, setGeolocationRequested] = useState(false);
 
-  // Get user's position on mount (uses cache if available)
+  // Function to manually trigger geolocation
+  const requestGeolocation = () => {
+    // If already loaded from cache, just use cached data
+    if (moduleUserCoordsLoaded) {
+      setUserCoords(moduleUserCoords);
+      return;
+    }
+    setGeolocationRequested(true);
+  };
+
+  // Get user's position when requested (or auto-request, or from cache)
   useEffect(() => {
-    // Skip if already loaded from module cache
+    // If already loaded from module cache, use it immediately
     if (moduleUserCoordsLoaded) {
       setUserCoords(moduleUserCoords);
       setIsGeolocating(false);
       return;
     }
 
+    // Only fetch if auto-request is enabled or manually requested
+    if (!autoRequestGeolocation && !geolocationRequested) {
+      return;
+    }
+
     let mounted = true;
+    setIsGeolocating(true);
 
     getUserPosition().then((coords) => {
       if (mounted) {
@@ -215,7 +257,7 @@ export function useLocationsWithProximity(): UseLocationsWithProximityReturn {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [autoRequestGeolocation, geolocationRequested]);
 
   // Fetch coordinates for all locations once they're loaded (uses cache if available)
   useEffect(() => {
@@ -310,5 +352,6 @@ export function useLocationsWithProximity(): UseLocationsWithProximityReturn {
     isGeolocating,
     userCoords,
     error,
+    requestGeolocation,
   };
 }

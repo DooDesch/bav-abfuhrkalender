@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getBAVApiService } from '@/lib/services/bav-api.service';
 import { cacheService } from '@/lib/services/cache.service';
 import { CACHE_TTL, CACHE_REFRESH_COOLDOWN } from '@/lib/config/constants';
 import { handleApiError, createSuccessResponse } from '@/lib/utils/error-handler';
@@ -8,25 +7,34 @@ import {
   buildCacheRefreshCooldownKey,
 } from '@/lib/utils/cache-keys';
 import type { WasteCalendarResponse } from '@/lib/types/bav-api.types';
+import { getWasteCollectionData } from '@/lib/services/provider-registry';
 
 // Force handler to run on every request so in-memory cache can be used
 export const dynamic = 'force-dynamic';
 
-function getLocationAndStreet(request: NextRequest): { location: string; street: string } | null {
+interface RequestParams {
+  location: string;
+  street: string;
+  houseNumberId?: string;
+}
+
+function getRequestParams(request: NextRequest): RequestParams | null {
   const { searchParams } = new URL(request.url);
   const location = searchParams.get('location')?.trim();
   const street = searchParams.get('street')?.trim();
+  const houseNumberId = searchParams.get('houseNumberId')?.trim() || undefined;
   if (!location || !street) return null;
-  return { location, street };
+  return { location, street, houseNumberId };
 }
 
 /**
- * GET /api/abfuhrkalender?location=<Ort>&street=<Straße>
+ * GET /api/abfuhrkalender?location=<Ort>&street=<Straße>&houseNumberId=<HausnummerID>
  * Returns waste collection calendar data for the given location and street
+ * houseNumberId is optional - required for some ASO locations
  */
 export async function GET(request: NextRequest) {
   try {
-    const params = getLocationAndStreet(request);
+    const params = getRequestParams(request);
     if (!params) {
       return NextResponse.json(
         {
@@ -38,8 +46,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { location, street } = params;
-    const cacheKey = buildWasteCollectionCacheKey(location, street);
+    const { location, street, houseNumberId } = params;
+    // Include houseNumberId in cache key if provided
+    const cacheKey = houseNumberId 
+      ? `${buildWasteCollectionCacheKey(location, street)}:hnr:${houseNumberId}`
+      : buildWasteCollectionCacheKey(location, street);
 
     // Check in-memory cache first
     const cachedData = cacheService.get<WasteCalendarResponse>(cacheKey);
@@ -52,8 +63,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const apiService = getBAVApiService();
-    const data = await apiService.getWasteCollectionData(location, street);
+    // Automatically resolves the correct provider (BAV or AbfallIO)
+    const data = await getWasteCollectionData(location, street, houseNumberId);
 
     cacheService.set(cacheKey, data);
     const cacheExpiresAt = new Date(
@@ -69,13 +80,13 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST /api/abfuhrkalender?location=<Ort>&street=<Straße>
+ * POST /api/abfuhrkalender?location=<Ort>&street=<Straße>&houseNumberId=<HausnummerID>
  * Manually refresh the cache for the given location and street
  * Has a 10-minute cooldown to prevent spam and unnecessary API costs
  */
 export async function POST(request: NextRequest) {
   try {
-    const params = getLocationAndStreet(request);
+    const params = getRequestParams(request);
     if (!params) {
       return NextResponse.json(
         {
@@ -87,8 +98,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { location, street } = params;
-    const cooldownKey = buildCacheRefreshCooldownKey(location, street);
+    const { location, street, houseNumberId } = params;
+    const cooldownKey = houseNumberId
+      ? `${buildCacheRefreshCooldownKey(location, street)}:hnr:${houseNumberId}`
+      : buildCacheRefreshCooldownKey(location, street);
 
     // Check if cooldown is active
     const cooldownExpiry = cacheService.getTtl(cooldownKey);
@@ -107,12 +120,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const cacheKey = buildWasteCollectionCacheKey(location, street);
+    const cacheKey = houseNumberId
+      ? `${buildWasteCollectionCacheKey(location, street)}:hnr:${houseNumberId}`
+      : buildWasteCollectionCacheKey(location, street);
 
     cacheService.delete(cacheKey);
 
-    const apiService = getBAVApiService();
-    const data = await apiService.getWasteCollectionData(location, street);
+    // Automatically resolves the correct provider (BAV or AbfallIO)
+    const data = await getWasteCollectionData(location, street, houseNumberId);
 
     cacheService.set(cacheKey, data);
 

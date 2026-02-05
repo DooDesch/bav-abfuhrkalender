@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Home, MapPin } from 'lucide-react';
 import StartLink from '@/components/StartLink';
-import { getBAVApiService } from '@/lib/services/bav-api.service';
+import { getWasteCollectionData as getProviderWasteData } from '@/lib/services/provider-registry';
 import { cacheService } from '@/lib/services/cache.service';
 import { buildWasteCollectionCacheKey } from '@/lib/utils/cache-keys';
 import {
@@ -11,6 +11,9 @@ import {
   capitalizeLocation,
   decodeStreetSlug,
   getBaseUrl,
+  generateStreetDescription,
+  generateStreetKeywords,
+  getCurrentYear,
 } from '@/lib/utils/seo';
 import type { WasteCalendarResponse } from '@/lib/types/bav-api.types';
 import WasteCollectionCalendar from '@/components/WasteCollectionCalendar';
@@ -20,6 +23,7 @@ import { Button } from '@/components/ui/button';
 
 interface StreetPageProps {
   params: Promise<{ location: string; street: string }>;
+  searchParams: Promise<{ hn?: string }>;
 }
 
 /**
@@ -38,6 +42,7 @@ export async function generateMetadata({
   const locationName = capitalizeLocation(locationSlug);
   const streetName = decodeStreetSlug(streetSlug);
   const baseUrl = getBaseUrl();
+  const year = getCurrentYear();
 
   if (!getLocationNameFromSlug(locationSlug)) {
     return {
@@ -46,26 +51,15 @@ export async function generateMetadata({
   }
 
   return {
-    title: `${streetName}, ${locationName} - Abfuhrtermine`,
-    description: `Müllabfuhr-Termine für ${streetName} in ${locationName}. Nächste Abholung für Restmüll, Gelber Sack, Papier, Bio und Glas. Kostenlos als ICS-Kalender exportieren.`,
-    keywords: [
-      `Müllabfuhr ${streetName} ${locationName}`,
-      `Abfuhrkalender ${streetName}`,
-      `Abfalltermine ${locationName}`,
-      streetName,
-      locationName,
-      'BAV',
-      'Restmüll',
-      'Gelber Sack',
-      'Papier',
-      'Biomüll',
-    ],
+    title: `${streetName}, ${locationName} - Abfuhrtermine ${year}`,
+    description: generateStreetDescription(streetName, locationName),
+    keywords: generateStreetKeywords(streetName, locationName),
     alternates: {
       canonical: `/${locationSlug}/${streetSlug}`,
     },
     openGraph: {
-      title: `Abfuhrkalender ${streetName}, ${locationName}`,
-      description: `Alle Müllabfuhr-Termine für ${streetName} in ${locationName}. Restmüll, Gelber Sack, Papier, Bio und Glas.`,
+      title: `Abfuhrkalender ${year}: ${streetName}, ${locationName}`,
+      description: `Abfuhrkalender ${year}: Alle Müllabfuhr-Termine für ${streetName} in ${locationName}. Restmüll, Gelber Sack, Papier, Bio und Glas.`,
       url: `${baseUrl}/${locationSlug}/${streetSlug}`,
       type: 'website',
     },
@@ -74,23 +68,25 @@ export async function generateMetadata({
 
 async function getWasteCollectionData(
   location: string,
-  street: string
+  street: string,
+  houseNumberId?: string
 ): Promise<WasteCalendarResponse> {
-  const cacheKey = buildWasteCollectionCacheKey(location, street);
+  const cacheKey = buildWasteCollectionCacheKey(location, street, houseNumberId);
   const cachedData = cacheService.get<WasteCalendarResponse>(cacheKey);
 
   if (cachedData) {
     return cachedData;
   }
 
-  const apiService = getBAVApiService();
-  const data = await apiService.getWasteCollectionData(location, street);
+  // Use provider-registry to automatically resolve BAV or ASO
+  const data = await getProviderWasteData(location, street, houseNumberId);
   cacheService.set(cacheKey, data);
   return data;
 }
 
-export default async function StreetPage({ params }: StreetPageProps) {
+export default async function StreetPage({ params, searchParams }: StreetPageProps) {
   const { location: locationSlug, street: streetSlug } = await params;
+  const { hn: houseNumberId } = await searchParams;
 
   // Validate location
   const originalLocationName = getLocationNameFromSlug(locationSlug);
@@ -106,7 +102,7 @@ export default async function StreetPage({ params }: StreetPageProps) {
   let error: string | null = null;
 
   try {
-    data = await getWasteCollectionData(originalLocationName, streetName);
+    data = await getWasteCollectionData(originalLocationName, streetName, houseNumberId);
   } catch (err) {
     error =
       err instanceof Error ? err.message : 'Fehler beim Laden der Daten';
@@ -179,6 +175,12 @@ export default async function StreetPage({ params }: StreetPageProps) {
             data={data}
             location={originalLocationName}
             street={data.street.name}
+            houseNumber={
+              houseNumberId
+                ? data.houseNumbers.find((h) => String(h.id) === houseNumberId)?.name
+                : undefined
+            }
+            houseNumberId={houseNumberId}
           />
         ) : (
           <Card glass>

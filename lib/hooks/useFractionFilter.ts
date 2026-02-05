@@ -181,16 +181,26 @@ export function useFractionFilter({
   // Clean up selection when available fractions change
   useEffect(() => {
     const currentAvailableIds = new Set(availableFractions.map((f) => f.id));
-    const filtered = new Set(
-      Array.from(selectedFractions).filter((id) => currentAvailableIds.has(id))
-    );
+    
+    setSelectedFractions((prev) => {
+      const filtered = new Set(
+        Array.from(prev).filter((id) => currentAvailableIds.has(id))
+      );
 
-    if (filtered.size === 0) {
-      setSelectedFractions(new Set(availableFractions.map((f) => f.id)));
-    } else if (filtered.size !== selectedFractions.size) {
-      setSelectedFractions(filtered);
-    }
-  }, [availableFractions, selectedFractions]);
+      // If all selected fractions were removed, select all available
+      if (filtered.size === 0) {
+        return new Set(availableFractions.map((f) => f.id));
+      }
+      
+      // Only update if something was actually filtered out
+      if (filtered.size !== prev.size) {
+        return filtered;
+      }
+      
+      // No change needed - return previous to avoid re-render
+      return prev;
+    });
+  }, [availableFractions]);
 
   const selectAll = useCallback(() => {
     setSelectedFractions(new Set(availableFractions.map((f) => f.id)));

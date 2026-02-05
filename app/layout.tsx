@@ -8,7 +8,7 @@ import Footer from "@/components/layout/Footer";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getBaseUrl, SEO_KEYWORDS } from "@/lib/utils/seo";
+import { getBaseUrl, getSeoKeywords, getCurrentYear, getProviderFullNames } from "@/lib/utils/seo";
 import JsonLd from "@/components/JsonLd";
 import CookieBanner from "@/components/CookieBanner";
 import ConsentSettings from "@/components/ConsentSettings";
@@ -45,16 +45,18 @@ const geistMono = Geist_Mono({
 });
 
 const baseUrl = getBaseUrl();
+const currentYear = getCurrentYear();
+const providerNames = getProviderFullNames().join(', ');
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: "Dein Abfuhrkalender - Müllabfuhr-Termine im Bergischen Land",
-    template: "%s | Dein Abfuhrkalender",
+    default: `Abfuhrkalender ${currentYear} - Müllabfuhr-Termine online`,
+    template: `%s | Abfuhrkalender ${currentYear}`,
   },
   description:
-    "Finde alle Müllabfuhr-Termine für deine Adresse im BAV-Gebiet (Bergischer Abfallwirtschaftsverband). Restmüll, Gelber Sack, Papier, Glas und Biomüll – kostenlos als ICS-Kalender exportieren.",
-  keywords: SEO_KEYWORDS,
+    `Abfuhrkalender ${currentYear}: Finde alle Müllabfuhr-Termine für deine Adresse. ${providerNames} und mehr. Restmüll, Gelber Sack, Papier, Glas und Biomüll – kostenlos als ICS-Kalender exportieren.`,
+  keywords: getSeoKeywords(),
   authors: [{ name: "DooDesch" }],
   creator: "DooDesch",
   publisher: "Dein Abfuhrkalender",
@@ -68,15 +70,15 @@ export const metadata: Metadata = {
     locale: "de_DE",
     url: baseUrl,
     siteName: "Dein Abfuhrkalender",
-    title: "Dein Abfuhrkalender - Müllabfuhr-Termine im Bergischen Land",
+    title: `Abfuhrkalender ${currentYear} - Müllabfuhr-Termine online`,
     description:
-      "Alle Abfuhrtermine für deine Adresse im BAV-Gebiet. Restmüll, Gelber Sack, Papier, Glas und Biomüll auf einen Blick.",
+      `Abfuhrkalender ${currentYear}: Alle Abfuhrtermine für deine Adresse. Restmüll, Gelber Sack, Papier, Glas und Biomüll auf einen Blick.`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Dein Abfuhrkalender - Müllabfuhr-Termine",
+    title: `Abfuhrkalender ${currentYear} - Müllabfuhr-Termine`,
     description:
-      "Finde alle Müllabfuhr-Termine für deine Adresse im Bergischen Land.",
+      `Abfuhrkalender ${currentYear}: Finde alle Müllabfuhr-Termine für deine Adresse.`,
   },
   robots: {
     index: true,

@@ -16,6 +16,7 @@ export default function BottomNav() {
   const pathname = usePathname();
   const lastLocation = useAddressStore((s) => s.lastLocation);
   const lastStreet = useAddressStore((s) => s.lastStreet);
+  const hasHydrated = useAddressStore((s) => s._hasHydrated);
 
   // Start with no animation to match server render, then animate on client
   const [shouldAnimate, setShouldAnimate] = useState(false);
@@ -28,7 +29,9 @@ export default function BottomNav() {
     }
   }, []);
 
-  const hasAddress = Boolean(lastLocation?.trim() && lastStreet?.trim());
+  // Only use address data after store has hydrated from localStorage
+  // This prevents hydration mismatch between server (no localStorage) and client
+  const hasAddress = hasHydrated && Boolean(lastLocation?.trim() && lastStreet?.trim());
 
   // Build calendar URL with SEO-friendly path
   const calendarHref = hasAddress

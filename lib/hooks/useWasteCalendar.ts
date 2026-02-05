@@ -38,13 +38,19 @@ interface UseWasteCalendarReturn {
  */
 export function useWasteCalendar(
   location: string | undefined,
-  street: string | undefined
+  street: string | undefined,
+  houseNumberId?: string
 ): UseWasteCalendarReturn {
   const shouldFetch = Boolean(location?.trim() && street?.trim());
   
-  const url = shouldFetch
-    ? `/api/abfuhrkalender?location=${encodeURIComponent(location!)}&street=${encodeURIComponent(street!)}`
-    : null;
+  // Build URL with optional houseNumberId
+  let url: string | null = null;
+  if (shouldFetch) {
+    url = `/api/abfuhrkalender?location=${encodeURIComponent(location!)}&street=${encodeURIComponent(street!)}`;
+    if (houseNumberId) {
+      url += `&houseNumberId=${encodeURIComponent(houseNumberId)}`;
+    }
+  }
 
   const { data, error, isLoading, isValidating, mutate } = useSWR<WasteCalendarResponse>(
     url,
@@ -65,7 +71,10 @@ export function useWasteCalendar(
     if (!shouldFetch) return;
     
     // Use POST to force cache refresh
-    const postUrl = `/api/abfuhrkalender?location=${encodeURIComponent(location!)}&street=${encodeURIComponent(street!)}`;
+    let postUrl = `/api/abfuhrkalender?location=${encodeURIComponent(location!)}&street=${encodeURIComponent(street!)}`;
+    if (houseNumberId) {
+      postUrl += `&houseNumberId=${encodeURIComponent(houseNumberId)}`;
+    }
     await fetch(postUrl, { method: 'POST' });
     await mutate();
   };

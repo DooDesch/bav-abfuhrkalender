@@ -9,6 +9,7 @@ import { useLocationsWithProximity } from '@/lib/hooks/useLocationsWithProximity
 import { createStreetSlug } from '@/lib/utils/seo';
 import LocationAutocomplete from '@/components/LocationAutocomplete';
 import StreetAutocomplete from '@/components/StreetAutocomplete';
+import HouseNumberSelect from '@/components/HouseNumberSelect';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -24,30 +25,60 @@ export default function AddressSearchForm({
   const router = useRouter();
   const location = useAddressStore((s) => s.location);
   const street = useAddressStore((s) => s.street);
+  const houseNumber = useAddressStore((s) => s.houseNumber);
+  const houseNumberId = useAddressStore((s) => s.houseNumberId);
   const setLocation = useAddressStore((s) => s.setLocation);
   const setStreet = useAddressStore((s) => s.setStreet);
+  const setHouseNumber = useAddressStore((s) => s.setHouseNumber);
   const setAddress = useAddressStore((s) => s.setAddress);
   const getLastAddress = useAddressStore((s) => s.getLastAddress);
   const setLastAddress = useAddressStore((s) => s.setLastAddress);
+  const restoreAddress = useAddressStore((s) => s.restoreAddress);
+  const hasHydrated = useAddressStore((s) => s._hasHydrated);
   
   // Track if we've already auto-filled from geolocation
   const autoFilledRef = useRef(false);
   const [wasAutoFilled, setWasAutoFilled] = useState(false);
   
-  // Get nearest location from geolocation
-  const { nearestLocation, isGeolocating } = useLocationsWithProximity();
+  // Track if house number selection is required
+  const [houseNumberRequired, setHouseNumberRequired] = useState(false);
+  
+  // Track if a street was explicitly selected from autocomplete
+  const [streetSelected, setStreetSelected] = useState(false);
+  
+  // Track if we've already initialized from localStorage
+  const initializedRef = useRef(false);
+  
+  // Get nearest location from geolocation (lazy - triggered on location input focus)
+  const { nearestLocation, isGeolocating, requestGeolocation } = useLocationsWithProximity();
 
-  // Initialize with defaults or last address
+  // Initialize with defaults or last address (wait for hydration)
   useEffect(() => {
+    // Wait for store to hydrate from localStorage
+    if (!hasHydrated) return;
+    
+    // Only initialize once
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+    
     if (defaultLocation !== '' || defaultStreet !== '') {
       setAddress(defaultLocation, defaultStreet);
+      // If we have a default street, consider it as selected
+      if (defaultStreet) {
+        setStreetSelected(true);
+      }
     } else {
       const last = getLastAddress();
       if (last.location || last.street) {
-        setAddress(last.location, last.street);
+        // Restore all address fields in one atomic update (prevents flicker)
+        restoreAddress(last);
+        // If we have a saved street, consider it as selected
+        if (last.street) {
+          setStreetSelected(true);
+        }
       }
     }
-  }, [defaultLocation, defaultStreet, setAddress, getLastAddress]);
+  }, [hasHydrated, defaultLocation, defaultStreet, setAddress, restoreAddress, getLastAddress]);
 
   // Auto-fill location from geolocation if no location is set
   useEffect(() => {
@@ -71,9 +102,50 @@ export default function AddressSearchForm({
     }
   }, [nearestLocation, isGeolocating, defaultLocation, location, setLocation]);
 
+  // Handle location input change (typing)
+  const handleLocationChange = useCallback(
+    (value: string) => {
+      setLocation(value);
+      // Reset street selection when location changes
+      setStreetSelected(false);
+    },
+    [setLocation]
+  );
+
+  // Handle location selection from dropdown
   const handleLocationSelect = useCallback(() => {
     setStreet('');
-  }, [setStreet]);
+    setHouseNumber('', '');
+    setHouseNumberRequired(false);
+    setStreetSelected(false);
+  }, [setStreet, setHouseNumber]);
+
+  const handleStreetChange = useCallback(
+    (value: string) => {
+      setStreet(value);
+      // Reset street selection when user types manually
+      setStreetSelected(false);
+    },
+    [setStreet]
+  );
+
+  const handleStreetSelect = useCallback(() => {
+    // Clear house number and mark street as selected from autocomplete
+    setHouseNumber('', '');
+    setStreetSelected(true);
+  }, [setHouseNumber]);
+
+  const handleHouseNumberChange = useCallback(
+    (name: string, id: string) => {
+      setHouseNumber(name, id);
+    },
+    [setHouseNumber]
+  );
+
+  // Update house number required state when house numbers load
+  const handleHouseNumbersLoaded = useCallback((required: boolean) => {
+    setHouseNumberRequired(required);
+  }, []);
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -81,15 +153,26 @@ export default function AddressSearchForm({
       const trimmedLocation = location.trim();
       const trimmedStreet = street.trim();
       if (!trimmedLocation || !trimmedStreet) return;
-      setLastAddress(trimmedLocation, trimmedStreet);
+      
+      // Check if house number is required but not selected
+      if (houseNumberRequired && !houseNumberId) return;
+      
+      setLastAddress(trimmedLocation, trimmedStreet, houseNumber, houseNumberId);
       const locationSlug = trimmedLocation.toLowerCase();
       const streetSlug = createStreetSlug(trimmedStreet);
-      router.push(`/${locationSlug}/${streetSlug}`);
+      
+      // Add house number as query param if selected
+      let url = `/${locationSlug}/${streetSlug}`;
+      if (houseNumberId) {
+        url += `?hn=${encodeURIComponent(houseNumberId)}`;
+      }
+      router.push(url);
     },
-    [location, street, setLastAddress, router]
+    [location, street, houseNumber, houseNumberId, houseNumberRequired, setLastAddress, router]
   );
 
-  const canSubmit = location.trim() && street.trim();
+  // Can submit if location and street are filled, and house number is filled if required
+  const canSubmit = location.trim() && street.trim() && (!houseNumberRequired || houseNumberId);
 
   return (
     <motion.div
@@ -127,8 +210,9 @@ export default function AddressSearchForm({
             <div className="space-y-2">
               <LocationAutocomplete
                 value={location}
-                onChange={setLocation}
+                onChange={handleLocationChange}
                 onSelect={handleLocationSelect}
+                onFocus={requestGeolocation}
                 id="location"
                 label="Ort"
                 placeholder="z. B. Wermelskirchen"
@@ -141,13 +225,27 @@ export default function AddressSearchForm({
               <StreetAutocomplete
                 location={location}
                 value={street}
-                onChange={setStreet}
+                onChange={handleStreetChange}
+                onSelect={handleStreetSelect}
                 id="street"
                 label="Straße"
                 placeholder="z. B. Hauptstraße"
                 required
               />
             </div>
+
+            {/* House Number Select (only shown when required) */}
+            <HouseNumberSelect
+              location={location}
+              street={street}
+              streetSelected={streetSelected}
+              value={houseNumber}
+              valueId={houseNumberId}
+              onChange={handleHouseNumberChange}
+              onRequiredChange={handleHouseNumbersLoaded}
+              id="houseNumber"
+              required
+            />
 
             {/* Submit Button */}
             <Button

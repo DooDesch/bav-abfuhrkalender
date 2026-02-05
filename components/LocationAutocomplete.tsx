@@ -8,6 +8,8 @@ interface LocationAutocompleteProps {
   onChange: (value: string) => void;
   /** Called when user selects an option from the dropdown (e.g. to clear dependent street field) */
   onSelect?: (value: string) => void;
+  /** Called when the input gains focus (e.g. to request geolocation) */
+  onFocus?: () => void;
   id?: string;
   label?: string;
   placeholder?: string;
@@ -25,6 +27,7 @@ export default function LocationAutocomplete({
   value,
   onChange,
   onSelect,
+  onFocus,
   id,
   label = 'Ort',
   placeholder = 'z. B. Ort suchen',
@@ -36,6 +39,7 @@ export default function LocationAutocomplete({
       value={value}
       onChange={onChange}
       onSelect={onSelect}
+      onFocus={onFocus}
       id={id}
       label={label}
       placeholder={placeholder}

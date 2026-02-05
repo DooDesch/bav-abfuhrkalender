@@ -11,7 +11,8 @@ const mockWasteCalendarData: WasteCalendarResponse = {
   appointments: [],
 };
 
-vi.mock('@/lib/services/bav-api.service', () => {
+// Mock the provider registry which is now used by the route
+vi.mock('@/lib/services/provider-registry', () => {
   const mockData: WasteCalendarResponse = {
     location: { id: 2813240, name: 'Wermelskirchen' },
     street: { id: 1, name: 'Elbringhausen' },
@@ -20,8 +21,11 @@ vi.mock('@/lib/services/bav-api.service', () => {
     appointments: [],
   };
   return {
-    BAVApiService: class MockBAVApiService {
-      getWasteCollectionData = () => Promise.resolve(mockData);
+    getWasteCollectionData: vi.fn().mockResolvedValue(mockData),
+    resolveProvider: vi.fn().mockReturnValue('bav'),
+    WasteProvider: {
+      BAV: 'bav',
+      ABFALL_IO_ASO: 'abfall_io_aso',
     },
   };
 });

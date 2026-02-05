@@ -66,8 +66,8 @@ const LocationMarquee = memo(function LocationMarquee() {
   // Check if a location is in the "nearby" section (first 20 items = 5 locations x 4 repeats)
   const isNearbyIndex = (index: number) => userCoords !== null && index < 20;
 
-  // Don't render until geolocation check is complete to avoid flickering
-  if (isLoading || isGeolocating || locations.length === 0) {
+  // Don't render if no locations available
+  if (isLoading || locations.length === 0) {
     return null;
   }
 

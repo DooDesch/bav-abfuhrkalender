@@ -132,9 +132,11 @@ export default function AppointmentList({
       <div className="space-y-3">
         {sortedDates.map((date, index) => {
           const appointmentsForDate = groupedByDate[date]!;
+          // Deduplicate fractions by ID to avoid duplicate keys
           const fractionsForDate = appointmentsForDate
             .map((t) => findFraction(t.fractionId))
-            .filter((f): f is Fraction => f !== undefined);
+            .filter((f): f is Fraction => f !== undefined)
+            .filter((f, i, arr) => arr.findIndex((x) => x.id === f.id) === i);
           
           const relativeTime = getRelativeTime(date);
           const isHighlighted = relativeTime.isToday || relativeTime.isTomorrow;

@@ -28,6 +28,31 @@ async function loadCache(): Promise<Record<string, { lat: number; lng: number }>
 }
 
 /**
+ * Get coordinates from cache, handling "Location - District" format
+ * For names like "Grasberg - Adolphsdorf", first checks full name, 
+ * then falls back to base location "Grasberg"
+ */
+function getCoordsFromCache(
+  cache: Record<string, { lat: number; lng: number }>,
+  locationName: string
+): { lat: number; lng: number } | null {
+  // Direct cache hit
+  if (cache[locationName]) {
+    return cache[locationName];
+  }
+  
+  // Try base location for "Location - District" format
+  if (locationName.includes(' - ')) {
+    const baseLocation = locationName.split(' - ')[0].trim();
+    if (cache[baseLocation]) {
+      return cache[baseLocation];
+    }
+  }
+  
+  return null;
+}
+
+/**
  * Save coordinates to permanent cache file
  */
 async function saveCache(cache: Record<string, { lat: number; lng: number }>): Promise<void> {
@@ -35,41 +60,89 @@ async function saveCache(cache: Record<string, { lat: number; lng: number }>): P
   await fs.writeFile(COORDS_CACHE_PATH, JSON.stringify(cache, null, 2), 'utf-8');
 }
 
+// Queue to prevent concurrent Nominatim requests (rate limit: 1 req/sec)
+let nominatimQueue: Promise<void> = Promise.resolve();
+let lastNominatimRequest = 0;
+const MIN_REQUEST_INTERVAL_MS = 1100; // Nominatim rate limit: 1 request per second
+
 /**
- * Fetch coordinates from OpenStreetMap Nominatim API
+ * Wait for rate limit before making Nominatim request
  */
-async function fetchFromNominatim(locationName: string): Promise<{ lat: number; lng: number } | null> {
+async function waitForRateLimit(): Promise<void> {
+  const now = Date.now();
+  const timeSinceLastRequest = now - lastNominatimRequest;
+  if (timeSinceLastRequest < MIN_REQUEST_INTERVAL_MS) {
+    await new Promise(resolve => setTimeout(resolve, MIN_REQUEST_INTERVAL_MS - timeSinceLastRequest));
+  }
+  lastNominatimRequest = Date.now();
+}
+
+/**
+ * Fetch coordinates from OpenStreetMap Nominatim API with retry logic
+ */
+async function fetchFromNominatim(
+  locationName: string, 
+  retries = 3, 
+  baseDelay = 2000
+): Promise<{ lat: number; lng: number } | null> {
   // Add ", Germany" to improve accuracy for German locations
   const query = encodeURIComponent(`${locationName}, Germany`);
   const url = `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`;
 
-  try {
-    const response = await fetch(url, {
-      headers: {
-        // Nominatim requires a valid User-Agent
-        'User-Agent': 'Dein-Abfuhrkalender/1.0 (https://github.com/DooDesch)',
-      },
-    });
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      // Wait for rate limit (queued)
+      await waitForRateLimit();
+      
+      const response = await fetch(url, {
+        headers: {
+          // Nominatim requires a valid User-Agent
+          'User-Agent': 'Dein-Abfuhrkalender/1.0 (https://github.com/DooDesch)',
+        },
+      });
 
-    if (!response.ok) {
-      console.error(`Nominatim API error: ${response.status}`);
+      if (response.status === 429) {
+        // Rate limited - wait with exponential backoff and retry
+        const delay = baseDelay * Math.pow(2, attempt);
+        console.warn(`Nominatim rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${retries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      if (!response.ok) {
+        console.error(`Nominatim API error: ${response.status}`);
+        return null;
+      }
+
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        return {
+          lat: parseFloat(data[0].lat),
+          lng: parseFloat(data[0].lon),
+        };
+      }
+
       return null;
+    } catch (error) {
+      console.error('Error fetching from Nominatim:', error);
+      if (attempt < retries - 1) {
+        const delay = baseDelay * Math.pow(2, attempt);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
     }
-
-    const data = await response.json();
-    
-    if (data && data.length > 0) {
-      return {
-        lat: parseFloat(data[0].lat),
-        lng: parseFloat(data[0].lon),
-      };
-    }
-
-    return null;
-  } catch (error) {
-    console.error('Error fetching from Nominatim:', error);
-    return null;
   }
+  
+  return null;
+}
+
+/**
+ * Queue a Nominatim request to prevent concurrent calls
+ */
+function queueNominatimRequest(locationName: string): Promise<{ lat: number; lng: number } | null> {
+  const request = nominatimQueue.then(() => fetchFromNominatim(locationName));
+  nominatimQueue = request.then(() => {}).catch(() => {});
+  return request;
 }
 
 /**
@@ -90,17 +163,18 @@ export async function GET(request: NextRequest) {
   try {
     const cache = await loadCache();
     
-    // Check cache first
-    if (cache[locationName]) {
+    // Check cache first (handles "Location - District" format)
+    const cachedCoords = getCoordsFromCache(cache, locationName);
+    if (cachedCoords) {
       return NextResponse.json({
         success: true,
-        data: cache[locationName],
+        data: cachedCoords,
         cached: true,
       });
     }
 
-    // Fetch from Nominatim
-    const coords = await fetchFromNominatim(locationName);
+    // Fetch from Nominatim (queued to respect rate limits)
+    const coords = await queueNominatimRequest(locationName);
     
     if (!coords) {
       return NextResponse.json(
@@ -147,27 +221,23 @@ export async function POST(request: NextRequest) {
     const results: Record<string, { lat: number; lng: number } | null> = {};
     const uncached: string[] = [];
 
-    // First pass: check cache
+    // First pass: check cache (handles "Location - District" format)
     for (const loc of locations) {
-      if (cache[loc]) {
-        results[loc] = cache[loc];
+      const cachedCoords = getCoordsFromCache(cache, loc);
+      if (cachedCoords) {
+        results[loc] = cachedCoords;
       } else {
         uncached.push(loc);
       }
     }
 
-    // Fetch uncached locations (with 1s delay between requests for rate limiting)
+    // Fetch uncached locations (queued to respect rate limits)
     for (const loc of uncached) {
-      const coords = await fetchFromNominatim(loc);
+      const coords = await queueNominatimRequest(loc);
       results[loc] = coords;
       
       if (coords) {
         cache[loc] = coords;
-      }
-
-      // Rate limit: 1 request per second for Nominatim
-      if (uncached.indexOf(loc) < uncached.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1100));
       }
     }
 

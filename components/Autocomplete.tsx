@@ -15,6 +15,8 @@ export interface AutocompleteProps<TOption extends AutocompleteOption = Autocomp
   value: string;
   onChange: (value: string) => void;
   onSelect?: (value: string) => void;
+  /** Called when the input gains focus */
+  onFocus?: () => void;
   id?: string;
   label?: string;
   placeholder?: string;
@@ -36,13 +38,42 @@ function filterOptions<TOption extends AutocompleteOption>(
 ): TOption[] {
   const q = query.trim().toLowerCase();
   if (!q) return options;
-  return options.filter((o) => getOptionLabel(o).toLowerCase().includes(q));
+  
+  // Filter and sort results intelligently:
+  // 1. Exact matches first
+  // 2. Starts with query second
+  // 3. Contains query elsewhere third
+  // Within each category, sort alphabetically
+  return options
+    .filter((o) => getOptionLabel(o).toLowerCase().includes(q))
+    .sort((a, b) => {
+      const labelA = getOptionLabel(a).toLowerCase();
+      const labelB = getOptionLabel(b).toLowerCase();
+      
+      const aExact = labelA === q;
+      const bExact = labelB === q;
+      const aStarts = labelA.startsWith(q);
+      const bStarts = labelB.startsWith(q);
+      
+      // Exact matches first
+      if (aExact && !bExact) return -1;
+      if (bExact && !aExact) return 1;
+      
+      // Then entries that start with query
+      if (aStarts && !bStarts) return -1;
+      if (bStarts && !aStarts) return 1;
+      
+      // Within same category, sort alphabetically
+      // This naturally puts "Osterholz-Scharmbeck" before "Osterholz-Scharmbeck - Buschhausen"
+      return labelA.localeCompare(labelB, 'de');
+    });
 }
 
 export default function Autocomplete<TOption extends AutocompleteOption = AutocompleteOption>({
   value,
   onChange,
   onSelect,
+  onFocus: onFocusProp,
   id: idProp,
   label,
   placeholder = '',
@@ -212,11 +243,30 @@ export default function Autocomplete<TOption extends AutocompleteOption = Autoco
           onFocus={(e) => {
             if (!disabled) {
               setOpen(true);
+              // Notify parent component about focus
+              onFocusProp?.();
               // Scroll input into view on mobile when keyboard opens
               // Small delay to allow keyboard to appear first
               setTimeout(() => {
                 e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
               }, 300);
+            }
+          }}
+          onBlur={() => {
+            // When losing focus, check if the current value matches an option exactly
+            // If so, trigger onSelect to mark it as a valid selection
+            if (!disabled && value.trim()) {
+              const exactMatch = resolvedOptions.find(
+                (o) => getOptionLabel(o).toLowerCase() === value.trim().toLowerCase()
+              );
+              if (exactMatch) {
+                const matchedLabel = getOptionLabel(exactMatch);
+                // Update to exact casing if different
+                if (matchedLabel !== value) {
+                  onChange(matchedLabel);
+                }
+                onSelect?.(matchedLabel);
+              }
             }
           }}
           onKeyDown={handleKeyDown}

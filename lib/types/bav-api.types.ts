@@ -1,8 +1,16 @@
 // BAV API Type Definitions (English)
 
+/**
+ * Available waste collection providers
+ * Re-exported from provider-registry for convenience
+ */
+export type WasteProviderType = 'bav' | 'abfall_io_aso';
+
 export interface Location {
   id: number;
   name: string;
+  /** Provider identifier - indicates which API serves this location */
+  provider?: WasteProviderType;
 }
 
 export interface Coordinates {

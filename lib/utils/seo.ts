@@ -1,6 +1,84 @@
 // SEO Utility Functions
 
 import locationCoords from '@/lib/data/location-coords.json';
+import asoMappings from '@/lib/data/aso-location-mappings.json';
+
+// ============================================================================
+// Provider Information
+// ============================================================================
+
+/**
+ * Provider metadata for SEO
+ */
+export interface ProviderInfo {
+  id: string;
+  name: string;
+  fullName: string;
+  region: string;
+}
+
+/**
+ * All supported waste collection providers
+ */
+export const PROVIDERS: ProviderInfo[] = [
+  {
+    id: 'bav',
+    name: 'BAV',
+    fullName: 'Bergischer Abfallwirtschaftsverband',
+    region: 'Bergisches Land',
+  },
+  {
+    id: 'aso',
+    name: 'ASO',
+    fullName: 'Abfall-Service Osterholz',
+    region: 'Osterholz',
+  },
+];
+
+/**
+ * Get all provider names (short form)
+ */
+export function getProviderNames(): string[] {
+  return PROVIDERS.map((p) => p.name);
+}
+
+/**
+ * Get all provider full names
+ */
+export function getProviderFullNames(): string[] {
+  return PROVIDERS.map((p) => p.fullName);
+}
+
+/**
+ * Get all provider regions
+ */
+export function getProviderRegions(): string[] {
+  return PROVIDERS.map((p) => p.region);
+}
+
+// ============================================================================
+// Date/Year Utilities
+// ============================================================================
+
+/**
+ * Get the current year
+ */
+export function getCurrentYear(): number {
+  return new Date().getFullYear();
+}
+
+/**
+ * Get a year range string for SEO (current year and next)
+ * e.g., "2026/2027"
+ */
+export function getYearRange(): string {
+  const year = getCurrentYear();
+  return `${year}/${year + 1}`;
+}
+
+// ============================================================================
+// URL Utilities
+// ============================================================================
 
 /**
  * Get the base URL for the application
@@ -16,11 +94,30 @@ export function getBaseUrl(): string {
   return process.env['NEXT_PUBLIC_BASE_URL'] || 'http://localhost:3000';
 }
 
+// ============================================================================
+// Location Utilities
+// ============================================================================
+
 /**
- * Get all valid location slugs from location-coords.json
+ * All location names from the BAV region
+ */
+export const BAV_LOCATIONS = Object.keys(locationCoords);
+
+/**
+ * All location names from the ASO region
+ */
+export const ASO_LOCATIONS = Object.keys(asoMappings);
+
+/**
+ * All supported locations (all providers combined)
+ */
+export const ALL_LOCATIONS = [...new Set([...BAV_LOCATIONS, ...ASO_LOCATIONS])];
+
+/**
+ * Get all valid location slugs
  */
 export function getLocationSlugs(): string[] {
-  return Object.keys(locationCoords).map((loc) => loc.toLowerCase());
+  return ALL_LOCATIONS.map((loc) => loc.toLowerCase());
 }
 
 /**
@@ -36,8 +133,7 @@ export function isValidLocationSlug(slug: string): boolean {
  * burscheid -> Burscheid, hückeswagen -> Hückeswagen
  */
 export function getLocationNameFromSlug(slug: string): string | null {
-  const locations = Object.keys(locationCoords);
-  return locations.find((loc) => loc.toLowerCase() === slug.toLowerCase()) || null;
+  return ALL_LOCATIONS.find((loc) => loc.toLowerCase() === slug.toLowerCase()) || null;
 }
 
 /**
@@ -72,32 +168,123 @@ export function decodeStreetSlug(slug: string): string {
     .join(' ');
 }
 
-/**
- * All location names from the BAV region for keywords
- */
-export const BAV_LOCATIONS = Object.keys(locationCoords);
+// ============================================================================
+// SEO Keywords
+// ============================================================================
 
 /**
- * Common SEO keywords for the application
+ * Get SEO keywords with current year
  */
-export const SEO_KEYWORDS = [
-  'Abfuhrkalender',
-  'BAV',
-  'Müllabfuhr',
-  'Bergischer Abfallwirtschaftsverband',
-  'Abfallkalender',
-  'Müllkalender',
-  'Restmüll',
-  'Gelber Sack',
-  'Altpapier',
-  'Papier',
-  'Biomüll',
-  'Biotonne',
-  'Glascontainer',
-  'Wertstoff',
-  'Entsorgung',
-  'Recycling',
-  'Abfallentsorgung',
-  'Bergisches Land',
-  ...BAV_LOCATIONS,
-];
+export function getSeoKeywords(): string[] {
+  const year = getCurrentYear();
+  const baseKeywords = [
+    // Year-specific keywords (very important for search)
+    `Abfuhrkalender ${year}`,
+    `Müllabfuhr ${year}`,
+    `Abfallkalender ${year}`,
+    `Müllkalender ${year}`,
+    // Provider names
+    ...getProviderNames(),
+    ...getProviderFullNames(),
+    // General keywords
+    'Abfuhrkalender',
+    'Müllabfuhr',
+    'Abfallkalender',
+    'Müllkalender',
+    'Abfuhrtermine',
+    'Mülltermine',
+    // Waste types
+    'Restmüll',
+    'Gelber Sack',
+    'Altpapier',
+    'Papier',
+    'Biomüll',
+    'Biotonne',
+    'Glascontainer',
+    'Wertstoff',
+    // Actions
+    'Entsorgung',
+    'Recycling',
+    'Abfallentsorgung',
+    'Müllabholung',
+    // Regions
+    ...getProviderRegions(),
+    // Top locations (limited to avoid keyword stuffing)
+    ...ALL_LOCATIONS.slice(0, 20),
+  ];
+  return [...new Set(baseKeywords)];
+}
+
+/**
+ * Static SEO keywords (for backwards compatibility)
+ * @deprecated Use getSeoKeywords() for dynamic year support
+ */
+export const SEO_KEYWORDS = getSeoKeywords();
+
+// ============================================================================
+// Metadata Generators
+// ============================================================================
+
+/**
+ * Generate dynamic page title with year
+ */
+export function generateTitle(base: string, includeYear = true): string {
+  if (includeYear) {
+    return `${base} ${getCurrentYear()}`;
+  }
+  return base;
+}
+
+/**
+ * Generate metadata description for location page
+ */
+export function generateLocationDescription(locationName: string): string {
+  const year = getCurrentYear();
+  return `Müllabfuhr-Termine ${year} für ${locationName}. Alle Abfuhrtermine für Restmüll, Gelber Sack, Papier, Bio und Glas. Kostenlos als ICS-Kalender exportieren.`;
+}
+
+/**
+ * Generate metadata description for street page
+ */
+export function generateStreetDescription(streetName: string, locationName: string): string {
+  const year = getCurrentYear();
+  return `Abfuhrkalender ${year} für ${streetName} in ${locationName}. Nächste Abholung für Restmüll, Gelber Sack, Papier, Bio und Glas. Kostenlos als ICS-Kalender exportieren.`;
+}
+
+/**
+ * Generate keywords for location page
+ */
+export function generateLocationKeywords(locationName: string): string[] {
+  const year = getCurrentYear();
+  return [
+    `Müllabfuhr ${locationName} ${year}`,
+    `Abfuhrkalender ${locationName} ${year}`,
+    `Abfalltermine ${locationName}`,
+    `Müllkalender ${locationName}`,
+    locationName,
+    ...getProviderNames(),
+    'Restmüll',
+    'Gelber Sack',
+    'Papier',
+    'Biomüll',
+  ];
+}
+
+/**
+ * Generate keywords for street page
+ */
+export function generateStreetKeywords(streetName: string, locationName: string): string[] {
+  const year = getCurrentYear();
+  return [
+    `Müllabfuhr ${streetName} ${locationName} ${year}`,
+    `Abfuhrkalender ${streetName} ${year}`,
+    `Abfalltermine ${locationName}`,
+    streetName,
+    locationName,
+    ...getProviderNames(),
+    'Restmüll',
+    'Gelber Sack',
+    'Papier',
+    'Biomüll',
+  ];
+}

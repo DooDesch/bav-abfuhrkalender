@@ -50,5 +50,49 @@
   "Wermelskirchen": {
     "lat": 51.1406481,
     "lng": 7.2156901
+  },
+  "Axstedt": {
+    "lat": 53.3553463,
+    "lng": 8.7731882
+  },
+  "Grasberg": {
+    "lat": 53.1833007,
+    "lng": 8.9833276
+  },
+  "Hambergen": {
+    "lat": 53.3105925,
+    "lng": 8.8244909
+  },
+  "Holste": {
+    "lat": 53.373541,
+    "lng": 8.8591405
+  },
+  "Lilienthal": {
+    "lat": 53.1414124,
+    "lng": 8.90677
+  },
+  "Lübberstedt": {
+    "lat": 53.3347412,
+    "lng": 8.8059296
+  },
+  "Osterholz-Scharmbeck": {
+    "lat": 53.2281763,
+    "lng": 8.7948239
+  },
+  "Ritterhude": {
+    "lat": 53.1886097,
+    "lng": 8.7521428
+  },
+  "Schwanewede": {
+    "lat": 53.2254676,
+    "lng": 8.5943316
+  },
+  "Vollersode": {
+    "lat": 53.3337929,
+    "lng": 8.916742
+  },
+  "Worpswede": {
+    "lat": 53.2230018,
+    "lng": 8.9283482
   }
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getBAVApiService } from '@/lib/services/bav-api.service';
+import { getWasteCollectionData } from '@/lib/services/provider-registry';
 import { cacheService } from '@/lib/services/cache.service';
 import { handleApiError } from '@/lib/utils/error-handler';
 import { buildIcs } from '@/lib/utils/ics-generator';
@@ -15,7 +15,7 @@ function parseIsoDate(value: string | null): Date | null {
 }
 
 /**
- * GET /api/export/ics?location=<Ort>&street=<Straße>&dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD&fractions=1,2,3
+ * GET /api/export/ics?location=<Ort>&street=<Straße>&houseNumberId=<ID>&dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD&fractions=1,2,3
  * Returns waste collection appointments as iCalendar (.ics) for Google Calendar etc.
  */
 export async function GET(request: NextRequest) {
@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const location = searchParams.get('location')?.trim();
     const street = searchParams.get('street')?.trim();
+    const houseNumberId = searchParams.get('houseNumberId')?.trim() || undefined;
 
     if (!location || !street) {
       return NextResponse.json(
@@ -48,13 +49,13 @@ export async function GET(request: NextRequest) {
           )
         : null;
 
-    const cacheKey = buildWasteCollectionCacheKey(location, street);
+    const cacheKey = buildWasteCollectionCacheKey(location, street, houseNumberId);
     let data: WasteCalendarResponse | undefined = cacheService.get<WasteCalendarResponse>(cacheKey);
     const expiryTimestamp = cacheService.getTtl(cacheKey);
 
     if (!data || expiryTimestamp == null || expiryTimestamp <= Date.now()) {
-      const apiService = getBAVApiService();
-      data = await apiService.getWasteCollectionData(location, street);
+      // Use provider-registry to automatically resolve BAV or ASO
+      data = await getWasteCollectionData(location, street, houseNumberId);
       cacheService.set(cacheKey, data);
     }
 

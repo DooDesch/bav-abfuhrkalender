@@ -1,22 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { unstable_cache } from 'next/cache';
-import { getBAVApiService } from '@/lib/services/bav-api.service';
 import { handleApiError } from '@/lib/utils/error-handler';
 import { CACHE_TTL } from '@/lib/config/constants';
+import { getStreets } from '@/lib/services/provider-registry';
 
-// Cache streets by location ID
+// Cache version - increment when street loading logic changes
+const CACHE_VERSION = 'v2';
+
+// Cache streets by location name (provider-agnostic)
 const getCachedStreets = unstable_cache(
-  async (locationId: number) => {
-    const apiService = getBAVApiService();
-    return apiService.getStreets(locationId);
+  async (locationName: string) => {
+    // Automatically resolves the correct provider
+    return getStreets(locationName);
   },
-  ['streets'],
+  [`streets-by-location-${CACHE_VERSION}`],
   { revalidate: CACHE_TTL, tags: ['streets'] }
 );
 
 /**
  * GET /api/streets?location=<Ort>
  * Returns list of streets for the given location (Ort) for autocomplete
+ * Automatically resolves the correct provider (BAV or AbfallIO)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -33,9 +37,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const apiService = getBAVApiService();
-    const location = await apiService.getLocationByName(locationName);
-    const streets = await getCachedStreets(location.id);
+    const streets = await getCachedStreets(locationName);
     return NextResponse.json({ success: true, data: streets });
   } catch (error) {
     return handleApiError(error, 'Failed to fetch streets');

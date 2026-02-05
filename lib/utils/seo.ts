@@ -48,7 +48,7 @@ const BAV_LOCATION_NAMES = [
 function getUniqueASOLocations(): string[] {
   const asoKeys = Object.keys(asoMappings);
   // Extract base location names (e.g., "Grasberg - Adolphsdorf" -> "Grasberg")
-  const baseNames = asoKeys.map((key) => key.split(' - ')[0]);
+  const baseNames = asoKeys.map((key) => key.split(' - ')[0] ?? key);
   return [...new Set(baseNames)];
 }
 
@@ -104,10 +104,11 @@ export function getProviderRegions(): string[] {
 export function getRegionsText(): string {
   const regions = getProviderRegions();
   if (regions.length === 0) return '';
-  if (regions.length === 1) return regions[0];
-  if (regions.length === 2) return `${regions[0]} und ${regions[1]}`;
+  if (regions.length === 1) return regions[0] ?? '';
+  if (regions.length === 2) return `${regions[0] ?? ''} und ${regions[1] ?? ''}`;
   // For 3+ regions: "A, B und C"
-  return `${regions.slice(0, -1).join(', ')} und ${regions[regions.length - 1]}`;
+  const lastRegion = regions[regions.length - 1] ?? '';
+  return `${regions.slice(0, -1).join(', ')} und ${lastRegion}`;
 }
 
 /**

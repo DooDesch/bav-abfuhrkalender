@@ -71,7 +71,7 @@ export const PROVIDERS: ProviderInfo[] = [
     name: 'ASO',
     fullName: 'Abfall-Service Osterholz',
     region: 'Landkreis Osterholz',
-    privacyUrl: 'https://www.aso-ohz.de/datenschutz/',
+    privacyUrl: 'https://www.aso-ohz.de/portal/seiten/Seite-901002039-21000.html',
     locations: ASO_LOCATION_NAMES,
   },
 ];

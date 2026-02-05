@@ -14,6 +14,8 @@ interface HouseNumber {
 interface HouseNumberSelectProps {
   location: string;
   street: string;
+  /** Street ID for faster API lookups (skips expensive street search) */
+  streetId?: string;
   /** Whether a street has been selected from autocomplete (not just typed) */
   streetSelected?: boolean;
   value: string;
@@ -29,6 +31,7 @@ interface HouseNumberSelectProps {
 export default function HouseNumberSelect({
   location,
   street,
+  streetId,
   streetSelected = false,
   value,
   valueId,
@@ -89,10 +92,13 @@ export default function HouseNumberSelect({
     debounceRef.current = setTimeout(() => {
       setLoading(true);
 
-      fetch(
-        `/api/house-numbers?location=${encodeURIComponent(trimmedLocation)}&street=${encodeURIComponent(trimmedStreet)}`,
-        { signal: controller.signal }
-      )
+      // Build URL with optional streetId for faster lookups
+      let url = `/api/house-numbers?location=${encodeURIComponent(trimmedLocation)}&street=${encodeURIComponent(trimmedStreet)}`;
+      if (streetId) {
+        url += `&sid=${encodeURIComponent(streetId)}`;
+      }
+
+      fetch(url, { signal: controller.signal })
         .then((res) => res.json())
         .then((data) => {
           if (!controller.signal.aborted) {

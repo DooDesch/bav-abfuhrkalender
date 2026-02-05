@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { unstable_cache } from 'next/cache';
 import { handleApiError } from '@/lib/utils/error-handler';
-import { CACHE_TTL } from '@/lib/config/constants';
+import { STREETS_CACHE_TTL } from '@/lib/config/constants';
 import { getStreets } from '@/lib/services/provider-registry';
 
 // Cache version - increment when street loading logic changes
 const CACHE_VERSION = 'v2';
 
-// Cache streets by location name (provider-agnostic)
+// Cache streets by location name for 24 hours (streets rarely change)
 const getCachedStreets = unstable_cache(
   async (locationName: string) => {
     // Automatically resolves the correct provider
     return getStreets(locationName);
   },
   [`streets-by-location-${CACHE_VERSION}`],
-  { revalidate: CACHE_TTL, tags: ['streets'] }
+  { revalidate: STREETS_CACHE_TTL, tags: ['streets'] }
 );
 
 /**

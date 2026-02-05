@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback } from 'react';
 import Autocomplete from '@/components/Autocomplete';
 import type { AutocompleteOption } from '@/components/Autocomplete';
 
@@ -34,11 +35,19 @@ export default function LocationAutocomplete({
   required = false,
   disabled = false,
 }: LocationAutocompleteProps) {
+  // Wrap onSelect to only pass the value (location ID is not needed)
+  const handleSelect = useCallback(
+    (selectedValue: string) => {
+      onSelect?.(selectedValue);
+    },
+    [onSelect]
+  );
+
   return (
     <Autocomplete
       value={value}
       onChange={onChange}
-      onSelect={onSelect}
+      onSelect={handleSelect}
       onFocus={onFocus}
       id={id}
       label={label}

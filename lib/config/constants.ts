@@ -19,13 +19,19 @@ export const ABFALL_IO_ASO_KEY =
 /** Modus key for AbfallIO API (constant across all providers) */
 export const ABFALL_IO_MODUS_KEY = 'd6c5855a62cf32a4dadbc2831f0f295f';
 
-/** TTL for AbfallIO session tokens (30 minutes in seconds) */
-export const ABFALL_IO_SESSION_TTL = 30 * 60;
+/** TTL for AbfallIO session tokens (4 hours in seconds) */
+export const ABFALL_IO_SESSION_TTL = 4 * 60 * 60;
 
 export const CACHE_TTL = parseInt(
   process.env['CACHE_TTL'] || '3600',
   10
 ); // 1 hour in seconds
+
+/** Cache TTL for locations data (7 days - locations rarely change) */
+export const LOCATIONS_CACHE_TTL = 7 * 24 * 60 * 60; // 7 days in seconds
+
+/** Cache TTL for streets data (24 hours - streets rarely change) */
+export const STREETS_CACHE_TTL = 24 * 60 * 60; // 24 hours in seconds
 
 /** Cooldown for cache refresh requests (10 minutes in seconds) */
 export const CACHE_REFRESH_COOLDOWN = 10 * 60; // 10 minutes in seconds

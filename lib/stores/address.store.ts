@@ -6,6 +6,8 @@ import type { WasteProviderType } from '@/lib/types/bav-api.types';
 export interface LastAddress {
   location: string;
   street: string;
+  /** Street API ID (for faster lookups without re-fetching) */
+  streetId?: string;
   /** House number display name (e.g., "2") */
   houseNumber?: string;
   /** House number API ID */
@@ -17,12 +19,16 @@ export interface LastAddress {
 interface AddressState {
   location: string;
   street: string;
+  /** Street API ID (for faster lookups without re-fetching) */
+  streetId: string;
   /** House number display name (e.g., "2") */
   houseNumber: string;
   /** House number API ID */
   houseNumberId: string;
   lastLocation: string;
   lastStreet: string;
+  /** Last used street API ID */
+  lastStreetId: string;
   lastHouseNumber: string;
   lastHouseNumberId: string;
   /** Cached provider for current/last address */
@@ -30,12 +36,13 @@ interface AddressState {
   // Flag to indicate user wants to select a new address
   wantsNewAddress: boolean;
   setLocation: (location: string) => void;
-  setStreet: (street: string) => void;
+  /** Set street name and optionally its API ID */
+  setStreet: (street: string, streetId?: string) => void;
   setHouseNumber: (houseNumber: string, houseNumberId: string) => void;
   clearHouseNumber: () => void;
-  setAddress: (location: string, street: string, provider?: WasteProviderType) => void;
+  setAddress: (location: string, street: string, streetId?: string, provider?: WasteProviderType) => void;
   getLastAddress: () => LastAddress;
-  setLastAddress: (location: string, street: string, houseNumber?: string, houseNumberId?: string, provider?: WasteProviderType) => void;
+  setLastAddress: (location: string, street: string, streetId?: string, houseNumber?: string, houseNumberId?: string, provider?: WasteProviderType) => void;
   /** Restore complete address state (all fields at once, no clearing) */
   restoreAddress: (address: LastAddress) => void;
   setWantsNewAddress: (wants: boolean) => void;
@@ -53,22 +60,25 @@ export const useAddressStore = create<AddressStore>()(
     (set, get) => ({
       location: '',
       street: '',
+      streetId: '',
       houseNumber: '',
       houseNumberId: '',
       lastLocation: '',
       lastStreet: '',
+      lastStreetId: '',
       lastHouseNumber: '',
       lastHouseNumberId: '',
       provider: undefined,
       wantsNewAddress: false,
       _hasHydrated: false,
-      setLocation: (location) => set({ location, houseNumber: '', houseNumberId: '' }),
-      setStreet: (street) => set({ street, houseNumber: '', houseNumberId: '' }),
+      setLocation: (location) => set({ location, street: '', streetId: '', houseNumber: '', houseNumberId: '' }),
+      setStreet: (street, streetId) => set({ street, streetId: streetId || '', houseNumber: '', houseNumberId: '' }),
       setHouseNumber: (houseNumber, houseNumberId) => set({ houseNumber, houseNumberId }),
       clearHouseNumber: () => set({ houseNumber: '', houseNumberId: '' }),
-      setAddress: (location, street, provider) => set({ 
+      setAddress: (location, street, streetId, provider) => set({ 
         location, 
-        street, 
+        street,
+        streetId: streetId || '',
         provider,
         houseNumber: '',
         houseNumberId: '',
@@ -76,20 +86,23 @@ export const useAddressStore = create<AddressStore>()(
       getLastAddress: () => ({
         location: get().lastLocation,
         street: get().lastStreet,
+        streetId: get().lastStreetId,
         houseNumber: get().lastHouseNumber,
         houseNumberId: get().lastHouseNumberId,
         provider: get().provider,
       }),
-      setLastAddress: (location, street, houseNumber, houseNumberId, provider) => {
+      setLastAddress: (location, street, streetId, houseNumber, houseNumberId, provider) => {
         const trimmedLocation = location.trim();
         const trimmedStreet = street.trim();
         set({
           location: trimmedLocation,
           street: trimmedStreet,
+          streetId: streetId || '',
           houseNumber: houseNumber || '',
           houseNumberId: houseNumberId || '',
           lastLocation: trimmedLocation,
           lastStreet: trimmedStreet,
+          lastStreetId: streetId || '',
           lastHouseNumber: houseNumber || '',
           lastHouseNumberId: houseNumberId || '',
           provider,
@@ -101,6 +114,7 @@ export const useAddressStore = create<AddressStore>()(
         set({
           location: address.location || '',
           street: address.street || '',
+          streetId: address.streetId || '',
           houseNumber: address.houseNumber || '',
           houseNumberId: address.houseNumberId || '',
           provider: address.provider,
@@ -127,6 +141,7 @@ export const useAddressStore = create<AddressStore>()(
       partialize: (state) => ({
         lastLocation: state.lastLocation,
         lastStreet: state.lastStreet,
+        lastStreetId: state.lastStreetId,
         lastHouseNumber: state.lastHouseNumber,
         lastHouseNumberId: state.lastHouseNumberId,
         provider: state.provider,

@@ -6,14 +6,17 @@
 /**
  * Build a cache key for waste collection data by location and street
  * Normalizes inputs to lowercase and trims whitespace
+ * Optionally includes houseNumberId for addresses that require it
  */
 export function buildWasteCollectionCacheKey(
   location: string,
-  street: string
+  street: string,
+  houseNumberId?: string
 ): string {
   const normalizedLocation = location.trim().toLowerCase();
   const normalizedStreet = street.trim().toLowerCase();
-  return `waste-collection:${normalizedLocation}:${normalizedStreet}`;
+  const baseKey = `waste-collection:${normalizedLocation}:${normalizedStreet}`;
+  return houseNumberId ? `${baseKey}:hnr:${houseNumberId}` : baseKey;
 }
 
 /**

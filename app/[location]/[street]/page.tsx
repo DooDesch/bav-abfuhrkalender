@@ -23,7 +23,7 @@ import { Button } from '@/components/ui/button';
 
 interface StreetPageProps {
   params: Promise<{ location: string; street: string }>;
-  searchParams: Promise<{ hn?: string }>;
+  searchParams: Promise<{ sid?: string; hn?: string }>;
 }
 
 /**
@@ -69,6 +69,7 @@ export async function generateMetadata({
 async function getWasteCollectionData(
   location: string,
   street: string,
+  streetId?: string,
   houseNumberId?: string
 ): Promise<WasteCalendarResponse> {
   const cacheKey = buildWasteCollectionCacheKey(location, street, houseNumberId);
@@ -79,14 +80,15 @@ async function getWasteCollectionData(
   }
 
   // Use provider-registry to automatically resolve BAV or ASO
-  const data = await getProviderWasteData(location, street, houseNumberId);
+  // streetId allows skipping expensive street lookup if provided
+  const data = await getProviderWasteData(location, street, streetId, houseNumberId);
   cacheService.set(cacheKey, data);
   return data;
 }
 
 export default async function StreetPage({ params, searchParams }: StreetPageProps) {
   const { location: locationSlug, street: streetSlug } = await params;
-  const { hn: houseNumberId } = await searchParams;
+  const { sid: streetId, hn: houseNumberId } = await searchParams;
 
   // Validate location
   const originalLocationName = getLocationNameFromSlug(locationSlug);
@@ -98,11 +100,12 @@ export default async function StreetPage({ params, searchParams }: StreetPagePro
   const streetName = decodeStreetSlug(streetSlug);
 
   // Fetch waste collection data
+  // streetId allows skipping expensive street lookup if provided (e.g., from form submission)
   let data: WasteCalendarResponse | null = null;
   let error: string | null = null;
 
   try {
-    data = await getWasteCollectionData(originalLocationName, streetName, houseNumberId);
+    data = await getWasteCollectionData(originalLocationName, streetName, streetId, houseNumberId);
   } catch (err) {
     error =
       err instanceof Error ? err.message : 'Fehler beim Laden der Daten';

@@ -160,10 +160,16 @@ export async function getAllLocations(): Promise<LocationWithProvider[]> {
 /**
  * Get waste collection data for a location and street
  * Automatically resolves the correct provider
+ * 
+ * @param locationName - Name of the location
+ * @param streetName - Name of the street
+ * @param streetId - Optional street ID (if provided, skips expensive street lookup for ASO)
+ * @param houseNumberId - Optional house number ID
  */
 export async function getWasteCollectionData(
   locationName: string,
   streetName: string,
+  streetId?: string,
   houseNumberId?: string
 ): Promise<WasteCalendarResponse> {
   const provider = resolveProvider(locationName);
@@ -184,8 +190,18 @@ export async function getWasteCollectionData(
         throw new Error(`No mapping found for ASO location: ${locationName}`);
       }
 
-      // For ASO, we need to first get the street ID
-      // Use getStreetsWithBezirk to handle locations that require district selection
+      // If streetId is provided, use it directly (saves an API call!)
+      if (streetId) {
+        return asoService.getWasteCollectionData(
+          mapping,
+          streetId,
+          locationName,
+          streetName,
+          houseNumberId
+        );
+      }
+
+      // Fallback: look up street by name (requires fetching all streets)
       const streets = await asoService.getStreetsWithBezirk(
         mapping.f_id_kommune,
         mapping.f_id_bezirk
@@ -217,10 +233,15 @@ export async function getWasteCollectionData(
 /**
  * Get available house numbers for a location and street
  * Returns empty array if no house number selection is required (e.g., for BAV)
+ * 
+ * @param locationName - Name of the location
+ * @param streetName - Name of the street
+ * @param streetId - Optional street ID (if provided, skips expensive street lookup for ASO)
  */
 export async function getHouseNumbers(
   locationName: string,
-  streetName: string
+  streetName: string,
+  streetId?: string
 ): Promise<Array<{ id: string; name: string }>> {
   const provider = resolveProvider(locationName);
 
@@ -240,7 +261,16 @@ export async function getHouseNumbers(
         throw new Error(`No mapping found for ASO location: ${locationName}`);
       }
 
-      // First get the street ID
+      // If streetId is provided, use it directly (saves an API call!)
+      if (streetId) {
+        return asoService.getHouseNumbers(
+          mapping.f_id_kommune,
+          streetId,
+          mapping.f_id_bezirk
+        );
+      }
+
+      // Fallback: look up street by name (requires fetching all streets)
       const streets = await asoService.getStreetsWithBezirk(
         mapping.f_id_kommune,
         mapping.f_id_bezirk

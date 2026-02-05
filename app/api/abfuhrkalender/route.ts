@@ -15,6 +15,8 @@ export const dynamic = 'force-dynamic';
 interface RequestParams {
   location: string;
   street: string;
+  /** Street ID for direct lookup (skips expensive street search) */
+  streetId?: string;
   houseNumberId?: string;
 }
 
@@ -22,14 +24,16 @@ function getRequestParams(request: NextRequest): RequestParams | null {
   const { searchParams } = new URL(request.url);
   const location = searchParams.get('location')?.trim();
   const street = searchParams.get('street')?.trim();
+  const streetId = searchParams.get('sid')?.trim() || undefined;
   const houseNumberId = searchParams.get('houseNumberId')?.trim() || undefined;
   if (!location || !street) return null;
-  return { location, street, houseNumberId };
+  return { location, street, streetId, houseNumberId };
 }
 
 /**
- * GET /api/abfuhrkalender?location=<Ort>&street=<Straße>&houseNumberId=<HausnummerID>
+ * GET /api/abfuhrkalender?location=<Ort>&street=<Straße>&sid=<StraßenID>&houseNumberId=<HausnummerID>
  * Returns waste collection calendar data for the given location and street
+ * sid (streetId) is optional - if provided, skips expensive street lookup for ASO
  * houseNumberId is optional - required for some ASO locations
  */
 export async function GET(request: NextRequest) {
@@ -46,11 +50,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { location, street, houseNumberId } = params;
-    // Include houseNumberId in cache key if provided
-    const cacheKey = houseNumberId 
-      ? `${buildWasteCollectionCacheKey(location, street)}:hnr:${houseNumberId}`
-      : buildWasteCollectionCacheKey(location, street);
+    const { location, street, streetId, houseNumberId } = params;
+    // Build cache key (includes houseNumberId if provided)
+    const cacheKey = buildWasteCollectionCacheKey(location, street, houseNumberId);
 
     // Check in-memory cache first
     const cachedData = cacheService.get<WasteCalendarResponse>(cacheKey);
@@ -64,7 +66,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Automatically resolves the correct provider (BAV or AbfallIO)
-    const data = await getWasteCollectionData(location, street, houseNumberId);
+    // streetId allows skipping expensive street lookup if provided
+    const data = await getWasteCollectionData(location, street, streetId, houseNumberId);
 
     cacheService.set(cacheKey, data);
     const cacheExpiresAt = new Date(
@@ -80,7 +83,7 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST /api/abfuhrkalender?location=<Ort>&street=<Straße>&houseNumberId=<HausnummerID>
+ * POST /api/abfuhrkalender?location=<Ort>&street=<Straße>&sid=<StraßenID>&houseNumberId=<HausnummerID>
  * Manually refresh the cache for the given location and street
  * Has a 10-minute cooldown to prevent spam and unnecessary API costs
  */
@@ -98,7 +101,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { location, street, houseNumberId } = params;
+    const { location, street, streetId, houseNumberId } = params;
     const cooldownKey = houseNumberId
       ? `${buildCacheRefreshCooldownKey(location, street)}:hnr:${houseNumberId}`
       : buildCacheRefreshCooldownKey(location, street);
@@ -120,14 +123,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const cacheKey = houseNumberId
-      ? `${buildWasteCollectionCacheKey(location, street)}:hnr:${houseNumberId}`
-      : buildWasteCollectionCacheKey(location, street);
+    const cacheKey = buildWasteCollectionCacheKey(location, street, houseNumberId);
 
     cacheService.delete(cacheKey);
 
     // Automatically resolves the correct provider (BAV or AbfallIO)
-    const data = await getWasteCollectionData(location, street, houseNumberId);
+    // streetId allows skipping expensive street lookup if provided
+    const data = await getWasteCollectionData(location, street, streetId, houseNumberId);
 
     cacheService.set(cacheKey, data);
 

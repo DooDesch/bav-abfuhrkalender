@@ -6,10 +6,12 @@ import type { AutocompleteOption } from '@/components/Autocomplete';
 
 interface StreetAutocompleteProps {
   location: string;
+  /** Whether the location has been explicitly selected from the dropdown (not just typed) */
+  locationSelected?: boolean;
   value: string;
   onChange: (value: string) => void;
-  /** Called when user selects an option from the dropdown */
-  onSelect?: (value: string) => void;
+  /** Called when user selects an option from the dropdown. Includes the street ID for API lookups. */
+  onSelect?: (value: string, streetId?: string) => void;
   id?: string;
   label?: string;
   placeholder?: string;
@@ -34,6 +36,7 @@ async function loadStreets(
 
 export default function StreetAutocomplete({
   location,
+  locationSelected = false,
   value,
   onChange,
   onSelect,
@@ -66,16 +69,31 @@ export default function StreetAutocomplete({
     };
   }, [location]);
 
+  // Only load streets when location has been explicitly selected from dropdown
+  // This prevents unnecessary API calls while user is still typing
   const loadOptions = useCallback(
-    (signal: AbortSignal) => loadStreets(debouncedLocation, signal),
-    [debouncedLocation]
+    (signal: AbortSignal) => {
+      if (!locationSelected) {
+        return Promise.resolve([]);
+      }
+      return loadStreets(debouncedLocation, signal);
+    },
+    [debouncedLocation, locationSelected]
+  );
+
+  // Wrap onSelect to convert ID to string for consistency
+  const handleSelect = useCallback(
+    (value: string, id?: string | number) => {
+      onSelect?.(value, id !== undefined ? String(id) : undefined);
+    },
+    [onSelect]
   );
 
   return (
     <Autocomplete
       value={value}
       onChange={onChange}
-      onSelect={onSelect}
+      onSelect={handleSelect}
       id={id}
       label={label}
       placeholder={placeholder}

@@ -14,7 +14,8 @@ export interface AutocompleteOption {
 export interface AutocompleteProps<TOption extends AutocompleteOption = AutocompleteOption> {
   value: string;
   onChange: (value: string) => void;
-  onSelect?: (value: string) => void;
+  /** Called when user selects an option from the dropdown. Includes the option ID for API lookups. */
+  onSelect?: (value: string, id?: string | number) => void;
   /** Called when the input gains focus */
   onFocus?: () => void;
   id?: string;
@@ -147,9 +148,9 @@ export default function Autocomplete<TOption extends AutocompleteOption = Autoco
   }, [highlightedIndex]);
 
   const handleSelect = useCallback(
-    (selectedValue: string) => {
+    (selectedValue: string, optionId?: string | number) => {
       onChange(selectedValue);
-      onSelect?.(selectedValue);
+      onSelect?.(selectedValue, optionId);
       setOpen(false);
       setHighlightedIndex(-1);
       inputRef.current?.blur();
@@ -186,7 +187,7 @@ export default function Autocomplete<TOption extends AutocompleteOption = Autoco
           if (highlightedIndex >= 0 && highlightedIndex < filtered.length) {
             const option = filtered[highlightedIndex];
             if (option) {
-              handleSelect(getOptionLabel(option));
+              handleSelect(getOptionLabel(option), option.id);
             }
           }
           break;
@@ -265,7 +266,7 @@ export default function Autocomplete<TOption extends AutocompleteOption = Autoco
                 if (matchedLabel !== value) {
                   onChange(matchedLabel);
                 }
-                onSelect?.(matchedLabel);
+                onSelect?.(matchedLabel, exactMatch.id);
               }
             }
           }}
@@ -349,7 +350,7 @@ export default function Autocomplete<TOption extends AutocompleteOption = Autoco
                     )}
                     onMouseDown={(e) => {
                       e.preventDefault();
-                      handleSelect(labelText);
+                      handleSelect(labelText, option.id);
                     }}
                     onMouseEnter={() => setHighlightedIndex(index)}
                   >

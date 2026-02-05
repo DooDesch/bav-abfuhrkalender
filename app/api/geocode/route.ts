@@ -43,8 +43,8 @@ function getCoordsFromCache(
   
   // Try base location for "Location - District" format
   if (locationName.includes(' - ')) {
-    const baseLocation = locationName.split(' - ')[0].trim();
-    if (cache[baseLocation]) {
+    const baseLocation = locationName.split(' - ')[0]?.trim();
+    if (baseLocation && cache[baseLocation]) {
       return cache[baseLocation];
     }
   }

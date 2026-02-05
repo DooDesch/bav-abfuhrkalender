@@ -5,24 +5,27 @@ import { CACHE_TTL } from '@/lib/config/constants';
 import { getHouseNumbers } from '@/lib/services/provider-registry';
 
 // Cache house numbers by location and street
+// Note: streetId is not part of cache key since same data is returned
 const getCachedHouseNumbers = unstable_cache(
-  async (locationName: string, streetName: string) => {
-    return getHouseNumbers(locationName, streetName);
+  async (locationName: string, streetName: string, streetId?: string) => {
+    return getHouseNumbers(locationName, streetName, streetId);
   },
   ['house-numbers-by-location-street'],
   { revalidate: CACHE_TTL, tags: ['house-numbers'] }
 );
 
 /**
- * GET /api/house-numbers?location=<Ort>&street=<Straße>
+ * GET /api/house-numbers?location=<Ort>&street=<Straße>&sid=<StraßenID>
  * Returns list of available house numbers for the given location and street
  * Returns empty array if no house number selection is required
+ * sid (streetId) is optional - if provided, skips expensive street lookup for ASO
  */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const locationName = searchParams.get('location')?.trim();
     const streetName = searchParams.get('street')?.trim();
+    const streetId = searchParams.get('sid')?.trim() || undefined;
 
     if (!locationName) {
       return NextResponse.json(
@@ -46,7 +49,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const houseNumbers = await getCachedHouseNumbers(locationName, streetName);
+    // streetId allows skipping expensive street lookup if provided
+    const houseNumbers = await getCachedHouseNumbers(locationName, streetName, streetId);
     
     return NextResponse.json({
       success: true,

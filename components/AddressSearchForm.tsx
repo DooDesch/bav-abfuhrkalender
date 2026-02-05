@@ -25,6 +25,7 @@ export default function AddressSearchForm({
   const router = useRouter();
   const location = useAddressStore((s) => s.location);
   const street = useAddressStore((s) => s.street);
+  const streetId = useAddressStore((s) => s.streetId);
   const houseNumber = useAddressStore((s) => s.houseNumber);
   const houseNumberId = useAddressStore((s) => s.houseNumberId);
   const setLocation = useAddressStore((s) => s.setLocation);
@@ -46,6 +47,9 @@ export default function AddressSearchForm({
   // Track if a street was explicitly selected from autocomplete
   const [streetSelected, setStreetSelected] = useState(false);
   
+  // Track if a location was explicitly selected from autocomplete
+  const [locationSelected, setLocationSelected] = useState(false);
+  
   // Track if we've already initialized from localStorage
   const initializedRef = useRef(false);
   
@@ -63,6 +67,10 @@ export default function AddressSearchForm({
     
     if (defaultLocation !== '' || defaultStreet !== '') {
       setAddress(defaultLocation, defaultStreet);
+      // If we have a default location, consider it as selected
+      if (defaultLocation) {
+        setLocationSelected(true);
+      }
       // If we have a default street, consider it as selected
       if (defaultStreet) {
         setStreetSelected(true);
@@ -72,6 +80,10 @@ export default function AddressSearchForm({
       if (last.location || last.street) {
         // Restore all address fields in one atomic update (prevents flicker)
         restoreAddress(last);
+        // If we have a saved location, consider it as selected
+        if (last.location) {
+          setLocationSelected(true);
+        }
         // If we have a saved street, consider it as selected
         if (last.street) {
           setStreetSelected(true);
@@ -99,6 +111,8 @@ export default function AddressSearchForm({
       autoFilledRef.current = true;
       setLocation(nearestLocation.name);
       setWasAutoFilled(true);
+      // Auto-filled location is a valid selection
+      setLocationSelected(true);
     }
   }, [nearestLocation, isGeolocating, defaultLocation, location, setLocation]);
 
@@ -106,7 +120,8 @@ export default function AddressSearchForm({
   const handleLocationChange = useCallback(
     (value: string) => {
       setLocation(value);
-      // Reset street selection when location changes
+      // Reset selections when user types (not selected from dropdown)
+      setLocationSelected(false);
       setStreetSelected(false);
     },
     [setLocation]
@@ -114,7 +129,10 @@ export default function AddressSearchForm({
 
   // Handle location selection from dropdown
   const handleLocationSelect = useCallback(() => {
-    setStreet('');
+    // Mark location as explicitly selected
+    setLocationSelected(true);
+    // Clear street with empty ID when location changes
+    setStreet('', '');
     setHouseNumber('', '');
     setHouseNumberRequired(false);
     setStreetSelected(false);
@@ -129,11 +147,18 @@ export default function AddressSearchForm({
     [setStreet]
   );
 
-  const handleStreetSelect = useCallback(() => {
-    // Clear house number and mark street as selected from autocomplete
-    setHouseNumber('', '');
-    setStreetSelected(true);
-  }, [setHouseNumber]);
+  const handleStreetSelect = useCallback(
+    (value: string, id?: string) => {
+      // Store the street ID when selected from autocomplete
+      if (id) {
+        setStreet(value, id);
+      }
+      // Clear house number and mark street as selected from autocomplete
+      setHouseNumber('', '');
+      setStreetSelected(true);
+    },
+    [setStreet, setHouseNumber]
+  );
 
   const handleHouseNumberChange = useCallback(
     (name: string, id: string) => {
@@ -157,18 +182,27 @@ export default function AddressSearchForm({
       // Check if house number is required but not selected
       if (houseNumberRequired && !houseNumberId) return;
       
-      setLastAddress(trimmedLocation, trimmedStreet, houseNumber, houseNumberId);
+      // Save address with streetId for faster subsequent lookups
+      setLastAddress(trimmedLocation, trimmedStreet, streetId || undefined, houseNumber, houseNumberId);
       const locationSlug = trimmedLocation.toLowerCase();
       const streetSlug = createStreetSlug(trimmedStreet);
       
-      // Add house number as query param if selected
+      // Build URL with optional query params for streetId and houseNumberId
       let url = `/${locationSlug}/${streetSlug}`;
+      const params = new URLSearchParams();
+      if (streetId) {
+        params.set('sid', streetId);
+      }
       if (houseNumberId) {
-        url += `?hn=${encodeURIComponent(houseNumberId)}`;
+        params.set('hn', houseNumberId);
+      }
+      const queryString = params.toString();
+      if (queryString) {
+        url += `?${queryString}`;
       }
       router.push(url);
     },
-    [location, street, houseNumber, houseNumberId, houseNumberRequired, setLastAddress, router]
+    [location, street, streetId, houseNumber, houseNumberId, houseNumberRequired, setLastAddress, router]
   );
 
   // Can submit if location and street are filled, and house number is filled if required
@@ -224,6 +258,7 @@ export default function AddressSearchForm({
             <div className="space-y-2">
               <StreetAutocomplete
                 location={location}
+                locationSelected={locationSelected}
                 value={street}
                 onChange={handleStreetChange}
                 onSelect={handleStreetSelect}
@@ -238,6 +273,7 @@ export default function AddressSearchForm({
             <HouseNumberSelect
               location={location}
               street={street}
+              streetId={streetId || undefined}
               streetSelected={streetSelected}
               value={houseNumber}
               valueId={houseNumberId}

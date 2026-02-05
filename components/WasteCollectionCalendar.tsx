@@ -1,9 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { MapPin, Download, Calendar, ArrowLeft, Clock, Truck } from 'lucide-react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MapPin, Download, Calendar, ArrowLeft, Clock, Truck, ChevronDown, Check, Home } from 'lucide-react';
 import type { WasteCalendarResponse, Appointment, Fraction } from '@/lib/types/bav-api.types';
 import { normalizeAddressKey } from '@/lib/utils/cache-keys';
 import { useAddressStore } from '@/lib/stores/address.store';
@@ -202,6 +204,172 @@ function NextPickupCard({ nextAppointments, fractions, date }: NextPickupCardPro
   );
 }
 
+// Component for selecting house number on calendar page
+interface HouseNumberSelectorProps {
+  houseNumbers: Array<{ id: string | number; name: string }>;
+  currentHouseNumberId?: string;
+  currentHouseNumber?: string;
+}
+
+function HouseNumberSelector({ houseNumbers, currentHouseNumberId, currentHouseNumber }: HouseNumberSelectorProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLUListElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+
+  // Client-side only mounting for portal
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Update dropdown position
+  const updatePosition = useCallback(() => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        position: 'fixed',
+        top: rect.bottom + 8,
+        left: rect.left + rect.width / 2,
+        transform: 'translateX(-50%)',
+        minWidth: Math.max(rect.width, 120),
+      });
+    }
+  }, []);
+
+  // Update position when opened and on scroll/resize
+  useEffect(() => {
+    if (!open) return;
+    
+    updatePosition();
+    
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [open, updatePosition]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!open) return;
+    
+    function handleClick(e: MouseEvent) {
+      const target = e.target as Node;
+      if (
+        buttonRef.current && !buttonRef.current.contains(target) &&
+        dropdownRef.current && !dropdownRef.current.contains(target)
+      ) {
+        setOpen(false);
+      }
+    }
+    
+    document.addEventListener('mousedown', handleClick);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+    };
+  }, [open]);
+
+  const handleSelect = useCallback((hn: { id: string | number; name: string }) => {
+    setOpen(false);
+    // Update URL with selected house number
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('hn', String(hn.id));
+    router.push(`${pathname}?${params.toString()}`);
+  }, [router, pathname, searchParams]);
+
+  const hasSelection = !!currentHouseNumberId;
+
+  const dropdownContent = (
+    <AnimatePresence>
+      {open && (
+        <motion.ul
+          ref={dropdownRef}
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2 }}
+          style={dropdownStyle}
+          className="z-[99999] max-h-60 overflow-y-auto rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 py-1 shadow-2xl"
+        >
+          {houseNumbers.map((hn) => {
+            const isSelected = String(currentHouseNumberId) === String(hn.id);
+            return (
+              <motion.li
+                key={hn.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className={cn(
+                  'flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm transition-colors',
+                  isSelected
+                    ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 font-medium'
+                    : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                )}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  handleSelect(hn);
+                }}
+              >
+                <span>{hn.name}</span>
+                {isSelected && <Check className="h-4 w-4 text-purple-500 shrink-0" />}
+              </motion.li>
+            );
+          })}
+        </motion.ul>
+      )}
+    </AnimatePresence>
+  );
+
+  return (
+    <div className="relative">
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={cn(
+          'w-full rounded-xl p-2.5 sm:p-3 text-center transition-all duration-200 cursor-pointer',
+          hasSelection
+            ? 'bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30'
+            : 'bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 ring-2 ring-amber-300/50 dark:ring-amber-600/50'
+        )}
+      >
+        <div className="flex items-center justify-center gap-1">
+          <p className={cn(
+            'text-xl sm:text-2xl font-bold',
+            hasSelection
+              ? 'text-purple-600 dark:text-purple-400'
+              : 'text-amber-600 dark:text-amber-400'
+          )}>
+            {currentHouseNumber || <Home className="h-5 w-5 sm:h-6 sm:w-6 inline" />}
+          </p>
+          <ChevronDown className={cn(
+            'h-4 w-4 transition-transform duration-200',
+            hasSelection
+              ? 'text-purple-500 dark:text-purple-400'
+              : 'text-amber-500 dark:text-amber-400',
+            open && 'rotate-180'
+          )} />
+        </div>
+        <p className={cn(
+          'text-[10px] sm:text-xs',
+          hasSelection
+            ? 'text-purple-700 dark:text-purple-300'
+            : 'text-amber-700 dark:text-amber-300'
+        )}>
+          {hasSelection ? 'Hausnr.' : 'Hausnr. wählen'}
+        </p>
+      </button>
+
+      {/* Render dropdown via portal to escape stacking context */}
+      {mounted && createPortal(dropdownContent, document.body)}
+    </div>
+  );
+}
+
 interface WasteCollectionCalendarProps {
   data: WasteCalendarResponse;
   location?: string;
@@ -333,7 +501,7 @@ export default function WasteCollectionCalendar({
 
       {/* Stats Card - Secondary info */}
       <FadeIn delay={0.1}>
-        <Card glass className="overflow-hidden">
+        <Card glass>
           <CardContent className="p-4">
             {/* Stats - Compact grid */}
             <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
@@ -353,24 +521,12 @@ export default function WasteCollectionCalendar({
                   Abfallarten
                 </p>
               </div>
-              {houseNumberProp ? (
-                <div className="rounded-xl bg-purple-50 dark:bg-purple-900/20 p-2.5 sm:p-3 text-center">
-                  <p className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400">
-                    {houseNumberProp}
-                  </p>
-                  <p className="text-[10px] sm:text-xs text-purple-700 dark:text-purple-300">
-                    Hausnr.
-                  </p>
-                </div>
-              ) : data.houseNumbers.length > 0 ? (
-                <div className="rounded-xl bg-purple-50 dark:bg-purple-900/20 p-2.5 sm:p-3 text-center">
-                  <p className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400">
-                    {data.houseNumbers.length}
-                  </p>
-                  <p className="text-[10px] sm:text-xs text-purple-700 dark:text-purple-300">
-                    Hausnr.
-                  </p>
-                </div>
+              {data.houseNumbers.length > 0 ? (
+                <HouseNumberSelector
+                  houseNumbers={data.houseNumbers}
+                  currentHouseNumberId={houseNumberIdProp}
+                  currentHouseNumber={houseNumberProp}
+                />
               ) : (
                 <div className="rounded-xl bg-zinc-50 dark:bg-zinc-800/50 p-2.5 sm:p-3 text-center">
                   <p className="text-xl sm:text-2xl font-bold text-zinc-600 dark:text-zinc-400">

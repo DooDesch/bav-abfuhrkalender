@@ -165,7 +165,7 @@ export default function Hero() {
           transition={{ duration: 0.5, delay: hasAnimatedRef.current ? 0 : 0.1, ease: [0.21, 0.47, 0.32, 0.98] }}
           className="mt-4 text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto"
         >
-          Alle Abfuhrtermine für deine Adresse im BAV-Gebiet.
+          Finde alle Abfuhrtermine für deine Adresse.
           <br className="hidden sm:block" />
           Einfach Ort und Straße eingeben.
         </motion.p>

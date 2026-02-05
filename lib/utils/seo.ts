@@ -8,14 +8,51 @@ import asoMappings from '@/lib/data/aso-location-mappings.json';
 // ============================================================================
 
 /**
- * Provider metadata for SEO
+ * Provider metadata for SEO and display
  */
 export interface ProviderInfo {
   id: string;
   name: string;
   fullName: string;
   region: string;
+  /** URL to the provider's privacy policy */
+  privacyUrl?: string;
+  /** List of locations served by this provider */
+  locations: string[];
 }
+
+/**
+ * BAV locations (Bergisches Land) - derived from location-coords.json
+ * These are the original 13 BAV municipalities
+ */
+const BAV_LOCATION_NAMES = [
+  'Burscheid',
+  'Engelskirchen',
+  'Hückeswagen',
+  'Kürten',
+  'Leichlingen',
+  'Lindlar',
+  'Morsbach',
+  'Nümbrecht',
+  'Odenthal',
+  'Overath',
+  'Radevormwald',
+  'Reichshof',
+  'Wermelskirchen',
+];
+
+/**
+ * ASO locations (Osterholz) - derived from aso-location-mappings.json
+ * Gets unique base location names (without district suffixes)
+ */
+function getUniqueASOLocations(): string[] {
+  const asoKeys = Object.keys(asoMappings);
+  // Extract base location names (e.g., "Grasberg - Adolphsdorf" -> "Grasberg")
+  const baseNames = asoKeys.map((key) => key.split(' - ')[0]);
+  return [...new Set(baseNames)];
+}
+
+const ASO_LOCATION_NAMES = getUniqueASOLocations();
 
 /**
  * All supported waste collection providers
@@ -26,12 +63,16 @@ export const PROVIDERS: ProviderInfo[] = [
     name: 'BAV',
     fullName: 'Bergischer Abfallwirtschaftsverband',
     region: 'Bergisches Land',
+    privacyUrl: 'https://www.bavweb.de/datenschutz/',
+    locations: BAV_LOCATION_NAMES,
   },
   {
     id: 'aso',
     name: 'ASO',
     fullName: 'Abfall-Service Osterholz',
-    region: 'Osterholz',
+    region: 'Landkreis Osterholz',
+    privacyUrl: 'https://www.aso-ohz.de/datenschutz/',
+    locations: ASO_LOCATION_NAMES,
   },
 ];
 
@@ -54,6 +95,40 @@ export function getProviderFullNames(): string[] {
  */
 export function getProviderRegions(): string[] {
   return PROVIDERS.map((p) => p.region);
+}
+
+/**
+ * Get all regions as a formatted string
+ * e.g., "Bergisches Land und Landkreis Osterholz"
+ */
+export function getRegionsText(): string {
+  const regions = getProviderRegions();
+  if (regions.length === 0) return '';
+  if (regions.length === 1) return regions[0];
+  if (regions.length === 2) return `${regions[0]} und ${regions[1]}`;
+  // For 3+ regions: "A, B und C"
+  return `${regions.slice(0, -1).join(', ')} und ${regions[regions.length - 1]}`;
+}
+
+/**
+ * Get all locations from all providers
+ */
+export function getAllProviderLocations(): string[] {
+  return PROVIDERS.flatMap((p) => p.locations);
+}
+
+/**
+ * Get provider by ID
+ */
+export function getProviderById(id: string): ProviderInfo | undefined {
+  return PROVIDERS.find((p) => p.id === id);
+}
+
+/**
+ * Get providers that have a privacy URL configured
+ */
+export function getProvidersWithPrivacyUrl(): ProviderInfo[] {
+  return PROVIDERS.filter((p) => p.privacyUrl);
 }
 
 // ============================================================================
@@ -100,18 +175,20 @@ export function getBaseUrl(): string {
 
 /**
  * All location names from the BAV region
+ * @deprecated Use PROVIDERS[0].locations or getAllProviderLocations() instead
  */
-export const BAV_LOCATIONS = Object.keys(locationCoords);
+export const BAV_LOCATIONS = PROVIDERS.find((p) => p.id === 'bav')?.locations ?? [];
 
 /**
- * All location names from the ASO region
+ * All location names from the ASO region (includes district variants)
  */
 export const ASO_LOCATIONS = Object.keys(asoMappings);
 
 /**
  * All supported locations (all providers combined)
+ * Includes both base location names and ASO district variants for routing
  */
-export const ALL_LOCATIONS = [...new Set([...BAV_LOCATIONS, ...ASO_LOCATIONS])];
+export const ALL_LOCATIONS = [...new Set([...Object.keys(locationCoords), ...ASO_LOCATIONS])];
 
 /**
  * Get all valid location slugs

@@ -1,4 +1,4 @@
-import { getBaseUrl } from '@/lib/utils/seo';
+import { getBaseUrl, PROVIDERS, getRegionsText } from '@/lib/utils/seo';
 
 interface JsonLdProps {
   type?: 'website' | 'location' | 'street';
@@ -12,14 +12,14 @@ interface JsonLdProps {
  */
 export default function JsonLd({ type = 'website', location, street }: JsonLdProps) {
   const baseUrl = getBaseUrl();
+  const regionsText = getRegionsText();
 
   // WebApplication Schema - describes the app itself
   const webApplicationSchema = {
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
     name: 'Dein Abfuhrkalender',
-    description:
-      'Finde alle Müllabfuhr-Termine für deine Adresse im BAV-Gebiet (Bergischer Abfallwirtschaftsverband).',
+    description: `Finde alle Müllabfuhr-Termine für deine Adresse. Unterstützte Regionen: ${regionsText}.`,
     url: baseUrl,
     applicationCategory: 'UtilitiesApplication',
     operatingSystem: 'Any',
@@ -34,36 +34,22 @@ export default function JsonLd({ type = 'website', location, street }: JsonLdPro
     },
   };
 
-  // GovernmentService Schema - describes the waste collection service
-  const governmentServiceSchema = {
+  // Generate GovernmentService schemas for each provider dynamically
+  const governmentServiceSchemas = PROVIDERS.map((provider) => ({
     '@context': 'https://schema.org',
     '@type': 'GovernmentService',
-    name: 'Müllabfuhr im Bergischen Abfallwirtschaftsverband',
+    name: `Müllabfuhr - ${provider.fullName}`,
     serviceType: 'Waste Collection',
     provider: {
       '@type': 'GovernmentOrganization',
-      name: 'Bergischer Abfallwirtschaftsverband (BAV)',
+      name: `${provider.fullName} (${provider.name})`,
       areaServed: {
         '@type': 'AdministrativeArea',
-        name: 'Bergisches Land, Nordrhein-Westfalen',
+        name: provider.region,
       },
     },
-    areaServed: [
-      'Burscheid',
-      'Engelskirchen',
-      'Hückeswagen',
-      'Kürten',
-      'Leichlingen',
-      'Lindlar',
-      'Morsbach',
-      'Nümbrecht',
-      'Odenthal',
-      'Overath',
-      'Radevormwald',
-      'Reichshof',
-      'Wermelskirchen',
-    ],
-  };
+    areaServed: provider.locations,
+  }));
 
   // BreadcrumbList Schema for location and street pages
   const getBreadcrumbSchema = () => {
@@ -147,12 +133,16 @@ export default function JsonLd({ type = 'website', location, street }: JsonLdPro
           __html: JSON.stringify(webApplicationSchema),
         }}
       />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(governmentServiceSchema),
-        }}
-      />
+      {/* Render a GovernmentService schema for each provider */}
+      {governmentServiceSchemas.map((schema, index) => (
+        <script
+          key={`gov-service-${index}`}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(schema),
+          }}
+        />
+      ))}
       {breadcrumbSchema && (
         <script
           type="application/ld+json"

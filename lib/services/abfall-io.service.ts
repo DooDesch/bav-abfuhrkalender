@@ -570,26 +570,21 @@ export class AbfallIOService {
       locationId: location.id,
     };
 
-    // If a house number was selected, fetch the list to get the name
+    // Always fetch the full list of available house numbers for this street
+    // This allows the calendar page to show a house number selector
     let houseNumbers: { id: number; name: string }[] = [];
-    if (houseNumberId) {
-      try {
-        const hnList = await this.getHouseNumbers(
-          locationMapping.f_id_kommune,
-          streetId,
-          locationMapping.f_id_bezirk
-        );
-        // Include only the selected house number in the response
-        const selectedHn = hnList.find((h) => h.id === houseNumberId);
-        if (selectedHn) {
-          houseNumbers = [{
-            id: parseInt(selectedHn.id, 10) || hashString(selectedHn.id),
-            name: selectedHn.name,
-          }];
-        }
-      } catch {
-        // Ignore errors fetching house numbers - they're optional for display
-      }
+    try {
+      const hnList = await this.getHouseNumbers(
+        locationMapping.f_id_kommune,
+        streetId,
+        locationMapping.f_id_bezirk
+      );
+      houseNumbers = hnList.map((h) => ({
+        id: parseInt(h.id, 10) || hashString(h.id),
+        name: h.name,
+      }));
+    } catch {
+      // Ignore errors fetching house numbers - they're optional
     }
 
     return {

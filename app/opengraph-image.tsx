@@ -5,6 +5,7 @@ import {
   getLogoBorderRadius,
   getIconSize,
 } from '@/lib/icons/recycle-icon';
+import { getRegionsText } from '@/lib/utils/seo';
 
 // OpenGraph image metadata (1200x630 is the recommended size)
 export const size = {
@@ -12,7 +13,7 @@ export const size = {
   height: 630,
 };
 export const contentType = 'image/png';
-export const alt = 'Dein Abfuhrkalender - Müllabfuhr-Termine im Bergischen Land';
+export const alt = `Dein Abfuhrkalender - Müllabfuhr-Termine für ${getRegionsText()}`;
 
 /**
  * OpenGraph image generation for social media sharing
@@ -90,7 +91,7 @@ export default function OpenGraphImage() {
             marginTop: 20,
           }}
         >
-          Müllabfuhr-Termine im Bergischen Land
+          Alle Müllabfuhr-Termine auf einen Blick
         </p>
       </div>
     ),

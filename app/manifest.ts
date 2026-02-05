@@ -1,15 +1,17 @@
 import type { MetadataRoute } from 'next';
+import { getRegionsText } from '@/lib/utils/seo';
 
 /**
  * Web App Manifest for PWA support
  * Enables "Add to Home Screen" functionality
  */
 export default function manifest(): MetadataRoute.Manifest {
+  const regionsText = getRegionsText();
+  
   return {
     name: 'Dein Abfuhrkalender',
     short_name: 'Abfuhrkalender',
-    description:
-      'Müllabfuhr-Termine für das Bergische Land. Finde alle Abfuhrtermine für deine Adresse.',
+    description: `Müllabfuhr-Termine für ${regionsText}. Finde alle Abfuhrtermine für deine Adresse.`,
     start_url: '/',
     display: 'standalone',
     background_color: '#f0fdf4',

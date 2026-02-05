@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowLeft, Shield, Cookie, BarChart3, Database, Mail, Scale } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PROVIDERS } from '@/lib/utils/seo';
 
 export const metadata: Metadata = {
   title: 'Datenschutzerklärung',
@@ -122,7 +123,7 @@ export default function DatenschutzPage() {
               Wenn du eine Adresse (Ort und Straße) eingibst, wird diese:
             </p>
             <ul className="list-disc pl-6 space-y-1 text-sm">
-              <li>An die API des Bergischen Abfallwirtschaftsverbands (BAV) übermittelt, um die Abfuhrtermine abzurufen</li>
+              <li>An die API des zuständigen Abfallwirtschaftsverbands übermittelt, um die Abfuhrtermine abzurufen (siehe Abschnitt 5)</li>
               <li>Optional in deinem Browser gespeichert (localStorage), damit du nicht bei jedem Besuch neu eingeben musst</li>
             </ul>
             <p className="text-sm">
@@ -236,25 +237,40 @@ export default function DatenschutzPage() {
 
           {/* Drittanbieter */}
           <Section icon={Database} title="5. Externe Dienste">
-            <h3 className="font-medium text-zinc-900 dark:text-zinc-100">
-              BAV API (Bergischer Abfallwirtschaftsverband)
-            </h3>
             <p>
               Um die Abfuhrtermine für deine Adresse anzuzeigen, werden Anfragen an die API des 
-              Bergischen Abfallwirtschaftsverbands (BAV) gesendet. Dabei wird die von dir eingegebene 
-              Adresse (Ort und Straße) übermittelt.
+              zuständigen Abfallwirtschaftsverbands gesendet. Je nach gewähltem Ort werden folgende 
+              Dienste genutzt:
             </p>
-            <p className="text-sm">
-              Die Datenschutzbestimmungen des BAV findest du unter:{' '}
-              <a 
-                href="https://www.bavweb.de/datenschutz/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline"
-              >
-                www.bavweb.de/datenschutz
-              </a>
-            </p>
+
+            {/* Dynamic provider list */}
+            {PROVIDERS.map((provider, index) => (
+              <div key={provider.id} className={index > 0 ? 'pt-4' : ''}>
+                <h3 className="font-medium text-zinc-900 dark:text-zinc-100">
+                  {provider.name} ({provider.fullName})
+                </h3>
+                <p className="text-sm">
+                  Zuständig für: {provider.region}
+                </p>
+                <p>
+                  Wenn du einen Ort aus dem Gebiet des {provider.name} auswählst, wird deine eingegebene 
+                  Adresse (Ort und Straße) an die API des {provider.fullName} übermittelt.
+                </p>
+                {provider.privacyUrl && (
+                  <p className="text-sm">
+                    Datenschutzbestimmungen:{' '}
+                    <a 
+                      href={provider.privacyUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      {provider.privacyUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                    </a>
+                  </p>
+                )}
+              </div>
+            ))}
 
             <h3 className="font-medium text-zinc-900 dark:text-zinc-100 pt-4">
               Vercel (Hosting)

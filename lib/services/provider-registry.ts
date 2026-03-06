@@ -1,6 +1,7 @@
 import { ABFALL_IO_ASO_KEY } from '@/lib/config/constants';
 import { getBAVApiService } from '@/lib/services/bav-api.service';
 import { getAbfallIOService } from '@/lib/services/abfall-io.service';
+import { getRSAGService, getRSAGLocationNames } from '@/lib/services/rsag.service';
 import type { Location, WasteCalendarResponse } from '@/lib/types/bav-api.types';
 import asoMappings from '@/lib/data/aso-location-mappings.json';
 import {
@@ -21,6 +22,7 @@ import {
 export enum WasteProvider {
   BAV = 'bav',
   ABFALL_IO_ASO = 'abfall_io_aso',
+  RSAG = 'rsag',
 }
 
 /**
@@ -53,6 +55,11 @@ export const PROVIDERS: Record<WasteProvider, ProviderConfig> = {
     name: 'ASO',
     description: 'Abfall-Service Osterholz',
   },
+  [WasteProvider.RSAG]: {
+    id: WasteProvider.RSAG,
+    name: 'RSAG',
+    description: 'Rhein-Sieg-Abfallwirtschaftsgesellschaft',
+  },
 };
 
 // ============================================================================
@@ -75,6 +82,16 @@ export function getASOLocationNames(): string[] {
 export function isASOLocation(locationName: string): boolean {
   const normalizedName = locationName.trim().toLowerCase();
   return getASOLocationNames().some(
+    (name) => name.toLowerCase() === normalizedName
+  );
+}
+
+/**
+ * Check if a location belongs to RSAG (Rhein-Sieg-Kreis)
+ */
+export function isRSAGLocation(locationName: string): boolean {
+  const normalizedName = locationName.trim().toLowerCase();
+  return getRSAGLocationNames().some(
     (name) => name.toLowerCase() === normalizedName
   );
 }
@@ -113,6 +130,11 @@ export function resolveProvider(locationName: string): WasteProvider {
     return WasteProvider.ABFALL_IO_ASO;
   }
 
+  // Check if it's an RSAG location (Rhein-Sieg-Kreis)
+  if (isRSAGLocation(locationName)) {
+    return WasteProvider.RSAG;
+  }
+
   // Default to BAV for unknown locations
   // This maintains backward compatibility
   return WasteProvider.BAV;
@@ -128,7 +150,9 @@ function fallbackLocationToProvider(
   const provider =
     loc.provider === 'aso'
       ? WasteProvider.ABFALL_IO_ASO
-      : WasteProvider.BAV;
+      : loc.provider === 'rsag'
+        ? WasteProvider.RSAG
+        : WasteProvider.BAV;
   return { id: loc.id, name: loc.name, provider };
 }
 
@@ -138,14 +162,19 @@ function fallbackLocationToProvider(
  */
 export async function getAllLocations(): Promise<LocationWithProvider[]> {
   const bavService = getBAVApiService();
+  const rsagService = getRSAGService();
 
   try {
-    const [bavLocations, asoLocationNames] = await Promise.all([
+    const [bavLocations, asoLocationNames, rsagLocations] = await Promise.all([
       bavService.getLocations().catch((error) => {
         console.error('Failed to fetch BAV locations:', error);
         return [] as Location[];
       }),
       Promise.resolve(getASOLocationNames()),
+      rsagService.getLocations().catch((error) => {
+        console.error('Failed to fetch RSAG locations:', error);
+        return [] as Location[];
+      }),
     ]);
 
     const taggedBavLocations: LocationWithProvider[] = bavLocations.map(
@@ -158,8 +187,11 @@ export async function getAllLocations(): Promise<LocationWithProvider[]> {
         provider: WasteProvider.ABFALL_IO_ASO,
       })
     );
+    const taggedRsagLocations: LocationWithProvider[] = rsagLocations.map(
+      (loc) => ({ ...loc, provider: WasteProvider.RSAG })
+    );
 
-    const result = [...taggedBavLocations, ...taggedAsoLocations];
+    const result = [...taggedBavLocations, ...taggedAsoLocations, ...taggedRsagLocations];
 
     // Update fallback so next time we have fresh data if provider fails
     if (result.length > 0) {
@@ -167,13 +199,19 @@ export async function getAllLocations(): Promise<LocationWithProvider[]> {
         result.map((loc) => ({
           id: loc.id,
           name: loc.name,
-          provider: loc.provider === WasteProvider.ABFALL_IO_ASO ? 'aso' : 'bav',
+          provider:
+            loc.provider === WasteProvider.ABFALL_IO_ASO
+              ? 'aso'
+              : loc.provider === WasteProvider.RSAG
+                ? 'rsag'
+                : 'bav',
         }))
       );
     }
 
     registerLocations(taggedBavLocations, WasteProvider.BAV);
     registerLocations(taggedAsoLocations, WasteProvider.ABFALL_IO_ASO);
+    registerLocations(taggedRsagLocations, WasteProvider.RSAG);
 
     // If provider returned empty (e.g. BAV down), serve fallback so UI always has locations
     if (result.length === 0) {
@@ -271,6 +309,16 @@ export async function getWasteCollectionData(
       );
     }
 
+    case WasteProvider.RSAG: {
+      const rsagService = getRSAGService();
+      return rsagService.getWasteCollectionData(
+        locationName,
+        streetName,
+        streetId,
+        houseNumberId
+      );
+    }
+
     default:
       throw new Error(`Unknown provider: ${provider}`);
   }
@@ -339,6 +387,11 @@ export async function getHouseNumbers(
       );
     }
 
+    case WasteProvider.RSAG: {
+      const rsagService = getRSAGService();
+      return rsagService.getHouseNumbers(locationName, streetName, streetId);
+    }
+
     default:
       throw new Error(`Unknown provider: ${provider}`);
   }
@@ -374,6 +427,13 @@ export async function getStreets(
           mapping.f_id_kommune,
           mapping.f_id_bezirk
         );
+        streets = list.map((s) => ({ id: s.id, name: s.name }));
+        break;
+      }
+
+      case WasteProvider.RSAG: {
+        const rsagService = getRSAGService();
+        const list = await rsagService.getStreets(locationName);
         streets = list.map((s) => ({ id: s.id, name: s.name }));
         break;
       }

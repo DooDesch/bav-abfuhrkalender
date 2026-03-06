@@ -46,10 +46,14 @@ export async function GET(request: NextRequest) {
       { revalidate: CACHE_TTL, tags: ['house-numbers'] }
     )();
 
-    // Non-BAV providers (e.g. ASO) always require a house number; BAV only when the API returns a list
+    // ASO always requires house number; BAV and RSAG only when the API returns a list
     const provider = resolveProvider(locationName);
     const required =
-      provider !== WasteProvider.BAV || houseNumbers.length > 0;
+      provider === WasteProvider.ABFALL_IO_ASO
+        ? true
+        : provider === WasteProvider.BAV
+          ? houseNumbers.length > 0
+          : false;
 
     return NextResponse.json({
       success: true,

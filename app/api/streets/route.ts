@@ -4,8 +4,8 @@ import { handleApiError } from '@/lib/utils/error-handler';
 import { STREETS_CACHE_TTL } from '@/lib/config/constants';
 import { getStreets } from '@/lib/services/provider-registry';
 
-// Cache version - increment when street loading logic changes
-const CACHE_VERSION = 'v2';
+// Cache version - increment when street loading logic changes (e.g. new provider)
+const CACHE_VERSION = 'v5';
 
 // Cache streets by location name for 24 hours (streets rarely change)
 const getCachedStreets = unstable_cache(

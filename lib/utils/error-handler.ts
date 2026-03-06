@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { BAVApiError } from '@/lib/types/bav-api.types';
 import type { ApiResponse } from '@/lib/types/bav-api.types';
+import { AbfallIOApiError } from '@/lib/types/abfall-io.types';
+import { RSAGApiError } from '@/lib/types/rsag.types';
 
 /**
  * Handle errors and return appropriate NextResponse
@@ -11,7 +13,11 @@ export function handleApiError(
 ): NextResponse<ApiResponse<never>> {
   console.error('API Error:', error);
 
-  if (error instanceof BAVApiError) {
+  if (
+    error instanceof BAVApiError ||
+    error instanceof AbfallIOApiError ||
+    error instanceof RSAGApiError
+  ) {
     return NextResponse.json(
       {
         success: false,

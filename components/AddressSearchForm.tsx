@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { MapPin, ArrowRight, Navigation } from 'lucide-react';
 import { useAddressStore } from '@/lib/stores/address.store';
@@ -36,9 +36,13 @@ export default function AddressSearchForm() {
   const [streetSelected, setStreetSelected] = useState(hasCompleteAddressInStore);
   const [locationSelected, setLocationSelected] = useState(hasCompleteAddressInStore);
 
-  // After hydration: if form is empty but we have a last address (e.g. after reload), restore it so form and HouseNumberSelect show correct state
+  // Only restore from last address once after hydration when form is empty (e.g. after reload).
+  // Do not restore when the user clears the input later, otherwise backspace would refill the field.
+  const hasRestoredAfterHydration = useRef(false);
   useEffect(() => {
     if (!hasHydrated) return;
+    if (hasRestoredAfterHydration.current) return;
+    hasRestoredAfterHydration.current = true;
     const last = getLastAddress();
     const hasLast = last.location?.trim() || last.street?.trim();
     const formEmpty = !location.trim() && !street.trim();

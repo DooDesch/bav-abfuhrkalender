@@ -4,7 +4,7 @@
  * Available waste collection providers
  * Re-exported from provider-registry for convenience
  */
-export type WasteProviderType = 'bav' | 'abfall_io_aso';
+export type WasteProviderType = 'bav' | 'abfall_io_aso' | 'rsag';
 
 export interface Location {
   id: number;

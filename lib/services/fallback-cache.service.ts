@@ -12,7 +12,7 @@ import asoMappings from '@/lib/data/aso-location-mappings.json';
 export type FallbackLocation = { id: number; name: string; provider: string };
 export type FallbackStreet = { id: number | string; name: string };
 
-// Static seed: BAV from PROVIDERS, ASO from mapping keys (same as provider-registry getASOLocationNames)
+// Static seed: BAV and RSAG from PROVIDERS, ASO from mapping keys (same as provider-registry getASOLocationNames)
 function getStaticLocationNames(): { name: string; providerId: string }[] {
   const out: { name: string; providerId: string }[] = [];
   const bav = PROVIDERS.find((p) => p.id === 'bav');
@@ -24,6 +24,12 @@ function getStaticLocationNames(): { name: string; providerId: string }[] {
   const asoKeys = Object.keys(asoMappings as Record<string, unknown>);
   for (const name of asoKeys) {
     out.push({ name, providerId: 'aso' });
+  }
+  const rsag = PROVIDERS.find((p) => p.id === 'rsag');
+  if (rsag) {
+    for (const name of rsag.locations) {
+      out.push({ name, providerId: 'rsag' });
+    }
   }
   return out;
 }

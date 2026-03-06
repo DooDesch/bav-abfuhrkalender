@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { BAV_API_BASE_URL, ABFALL_IO_BASE_URL, ABFALL_IO_ASO_KEY, ABFALL_IO_MODUS_KEY } from '@/lib/config/constants';
+import { BAV_API_BASE_URL, ABFALL_IO_BASE_URL, ABFALL_IO_ASO_KEY, ABFALL_IO_MODUS_KEY, RSAG_API_BASE_URL } from '@/lib/config/constants';
 import { WasteProvider, PROVIDERS } from '@/lib/services/provider-registry';
 import { cacheService } from '@/lib/services/cache.service';
 
@@ -34,6 +34,7 @@ async function ping(url: string): Promise<ProviderStatus> {
 const PING_URLS: Record<WasteProvider, string> = {
   [WasteProvider.BAV]: `${BAV_API_BASE_URL}/orte`,
   [WasteProvider.ABFALL_IO_ASO]: `${ABFALL_IO_BASE_URL}/?key=${ABFALL_IO_ASO_KEY}&mession=${ABFALL_IO_MODUS_KEY}&wession=init`,
+  [WasteProvider.RSAG]: `${RSAG_API_BASE_URL}/api/pickup/filter/7530/1,2,3,4,6,7,8/1`,
 };
 
 export async function GET() {

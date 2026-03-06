@@ -55,6 +55,31 @@ function getUniqueASOLocations(): string[] {
 const ASO_LOCATION_NAMES = getUniqueASOLocations();
 
 /**
+ * RSAG locations (Rhein-Sieg-Kreis) – 19 cities/municipalities
+ */
+const RSAG_LOCATION_NAMES = [
+  'Alfter',
+  'Bad Honnef',
+  'Bornheim',
+  'Eitorf',
+  'Hennef',
+  'Königswinter',
+  'Lohmar',
+  'Meckenheim',
+  'Much',
+  'Neunkirchen-Seelscheid',
+  'Niederkassel',
+  'Rheinbach',
+  'Ruppichteroth',
+  'Sankt Augustin',
+  'Siegburg',
+  'Swisttal',
+  'Troisdorf',
+  'Wachtberg',
+  'Windeck',
+];
+
+/**
  * All supported waste collection providers
  */
 export const PROVIDERS: ProviderInfo[] = [
@@ -73,6 +98,14 @@ export const PROVIDERS: ProviderInfo[] = [
     region: 'Landkreis Osterholz',
     privacyUrl: 'https://www.aso-ohz.de/portal/seiten/Seite-901002039-21000.html',
     locations: ASO_LOCATION_NAMES,
+  },
+  {
+    id: 'rsag',
+    name: 'RSAG',
+    fullName: 'Rhein-Sieg-Abfallwirtschaftsgesellschaft',
+    region: 'Rhein-Sieg-Kreis',
+    privacyUrl: 'https://www.rsag.de/datenschutz/',
+    locations: RSAG_LOCATION_NAMES,
   },
 ];
 

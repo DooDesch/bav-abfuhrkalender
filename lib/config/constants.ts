@@ -5,6 +5,13 @@ export const BAV_API_BASE_URL =
   'https://bav-abfallapp.regioit.de/abfall-app-bav/rest';
 
 // ============================================================================
+// RSAG (Rhein-Sieg-Kreis) Configuration – own API on rsag.de
+// ============================================================================
+
+export const RSAG_API_BASE_URL =
+  process.env['RSAG_API_BASE_URL'] || 'https://www.rsag.de';
+
+// ============================================================================
 // AbfallIO (ASO Osterholz) Configuration
 // ============================================================================
 

@@ -6,6 +6,7 @@ import StartLink from '@/components/StartLink';
 import { getWasteCollectionData as getProviderWasteData, resolveProvider, PROVIDERS } from '@/lib/services/provider-registry';
 import { BAVApiError } from '@/lib/types/bav-api.types';
 import { AbfallIOApiError } from '@/lib/types/abfall-io.types';
+import { RSAGApiError } from '@/lib/types/rsag.types';
 import { cacheService } from '@/lib/services/cache.service';
 import { buildWasteCollectionCacheKey } from '@/lib/utils/cache-keys';
 import {
@@ -111,7 +112,7 @@ export default async function StreetPage({ params, searchParams }: StreetPagePro
   } catch (err) {
     console.error('Error fetching waste collection data:', err);
 
-    if (err instanceof BAVApiError || err instanceof AbfallIOApiError) {
+    if (err instanceof BAVApiError || err instanceof AbfallIOApiError || err instanceof RSAGApiError) {
       const provider = resolveProvider(originalLocationName);
       const name = PROVIDERS[provider].name;
       error = `Der Abfuhrkalender-Dienstleister (${name}) ist derzeit nicht erreichbar. Bitte später erneut versuchen.`;

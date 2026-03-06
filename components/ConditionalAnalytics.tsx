@@ -16,9 +16,10 @@ export default function ConditionalAnalytics() {
   const { hasConsented, categories } = useConsentStore();
   const [mounted, setMounted] = useState(false);
 
-  // Prevent hydration mismatch
+  // Prevent hydration mismatch (client-only mount flag)
   useEffect(() => {
-    setMounted(true);
+    const t = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(t);
   }, []);
 
   // Only render analytics if:

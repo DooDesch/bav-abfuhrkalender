@@ -47,14 +47,6 @@ export default function AddressSearchForm() {
     }
   }, [hasHydrated, getLastAddress, restoreAddress, location, street]);
 
-  // When store has full address (after restore or navigation back), ensure HouseNumberSelect fetches house numbers
-  useEffect(() => {
-    if (streetId && location.trim() && street.trim()) {
-      setStreetSelected(true);
-      setLocationSelected(true);
-    }
-  }, [location, street, streetId]);
-
   // Handle location input change (typing)
   const handleLocationChange = useCallback(
     (value: string) => {

@@ -12,7 +12,6 @@ import { AbfallIOApiError } from '@/lib/types/abfall-io.types';
 import type {
   Location,
   Street,
-  Fraction,
   Appointment,
   WasteCalendarResponse,
 } from '@/lib/types/bav-api.types';

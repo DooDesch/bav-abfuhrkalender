@@ -74,11 +74,12 @@ export function useExportModal({
 
   const isDateRangeValid = dateFrom <= dateTo;
 
-  // Sync export fractions from main filter when modal opens
+  // Sync export fractions from main filter when modal opens (deferred to avoid setState-in-effect)
   useEffect(() => {
-    if (isOpen) {
-      setExportSelectedFractions(new Set(selectedFractions));
-    }
+    if (!isOpen) return;
+    const next = new Set(selectedFractions);
+    const t = setTimeout(() => setExportSelectedFractions(next), 0);
+    return () => clearTimeout(t);
   }, [isOpen, selectedFractions]);
 
   const open = useCallback(() => {

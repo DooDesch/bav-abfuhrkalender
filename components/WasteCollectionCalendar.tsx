@@ -5,14 +5,14 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, Download, Calendar, ArrowLeft, Clock, Truck, ChevronDown, Check, Home } from 'lucide-react';
+import { MapPin, Download, Calendar, ArrowLeft, Truck, ChevronDown, Check, Home } from 'lucide-react';
 import type { WasteCalendarResponse, Appointment, Fraction } from '@/lib/types/bav-api.types';
 import { normalizeAddressKey } from '@/lib/utils/cache-keys';
 import { useAddressStore } from '@/lib/stores/address.store';
 import { useFractionFilter } from '@/lib/hooks/useFractionFilter';
 import { useExportModal } from '@/lib/hooks/useExportModal';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -221,9 +221,10 @@ function HouseNumberSelector({ houseNumbers, currentHouseNumberId, currentHouseN
   const dropdownRef = useRef<HTMLUListElement>(null);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
-  // Client-side only mounting for portal
+  // Client-side only mounting for portal (avoids hydration mismatch)
   useEffect(() => {
-    setMounted(true);
+    const t = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(t);
   }, []);
 
   // Update dropdown position
@@ -644,7 +645,7 @@ export default function WasteCollectionCalendar({
             {!exportModal.isDateRangeValid && (
               <p className="text-sm text-amber-600 dark:text-amber-400 flex items-center gap-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                Das „Von"-Datum muss vor dem „Bis"-Datum liegen.
+                Das „Von&quot;-Datum muss vor dem „Bis&quot;-Datum liegen.
               </p>
             )}
           </div>

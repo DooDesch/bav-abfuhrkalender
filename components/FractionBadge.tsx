@@ -1,5 +1,6 @@
 'use client';
 
+import { createElement } from 'react';
 import type { Fraction } from '@/lib/types/bav-api.types';
 import { Trash2, Newspaper, Package, Wine, Leaf, Recycle, HelpCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -81,7 +82,7 @@ export default function FractionBadge({
 }: FractionBadgeProps) {
   const defaultColor = '#71717a';
   const color = fraction.color || defaultColor;
-  const Icon = getFractionIcon(fraction.name);
+  const IconComponent = getFractionIcon(fraction.name);
   const description = getFractionDescription(fraction.name);
 
   const badge = (
@@ -99,7 +100,7 @@ export default function FractionBadge({
         boxShadow: `0 2px 8px ${color}10`,
       }}
     >
-      {showIcon && <Icon className={iconSizeClasses[size]} />}
+      {showIcon && createElement(IconComponent, { className: iconSizeClasses[size] })}
       {fraction.name}
     </span>
   );

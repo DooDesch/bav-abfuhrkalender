@@ -442,10 +442,6 @@ export function parseWasteTypeCheckboxes(
 ): Array<{ id: number; name: string }> {
   const wasteTypes: Array<{ id: number; name: string }> = [];
 
-  // Match checkbox inputs and their labels
-  const checkboxRegex =
-    /<input[^>]*type="checkbox"[^>]*name="f_id_abfalltyp_\d+"[^>]*value="(\d+)"[^>]*>[\s\S]*?<\/span>\s*<\/div>\s*<div class="awk-ui-input-tr">\s*<label[^>]*>(?:<span[^>]*>[^<]*<\/span>)?([^<]+)/gi;
-
   // Simpler approach: find labels that contain waste type names
   const labelRegex =
     /<label[^>]*for="f_id_abfalltyp_(\d+)_[^"]*"[^>]*>(?:<span[^>]*>[^<]*<\/span>)?([^<]+)</gi;

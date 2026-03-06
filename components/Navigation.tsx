@@ -24,9 +24,9 @@ export default function Navigation() {
   const shouldAnimate = !hasAnimatedOnce;
 
   useEffect(() => {
-    setMounted(true);
-    // Mark animation as complete after first mount
     hasAnimatedOnce = true;
+    const t = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(t);
   }, []);
 
   // Track scroll position for glass effect intensity

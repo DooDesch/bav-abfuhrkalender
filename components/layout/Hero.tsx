@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useMemo, useRef, useEffect } from 'react';
+import { memo, useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Trash2, Newspaper, Package, Wine, Leaf, MapPin, Navigation } from 'lucide-react';
 import { useLocationsWithProximity } from '@/lib/hooks/useLocationsWithProximity';
@@ -50,11 +50,11 @@ const LocationBadge = memo(function LocationBadge({
 // Location Marquee Component using CSS animation
 // Locations are sorted by proximity to user (nearest first, repeated 4x)
 const LocationMarquee = memo(function LocationMarquee() {
-  const { locations, isLoading, isGeolocating, userCoords } = useLocationsWithProximity();
-  const hasAnimatedRef = useRef(false);
-
+  const { locations, isLoading, userCoords } = useLocationsWithProximity();
+  const [hasAnimated, setHasAnimated] = useState(false);
   useEffect(() => {
-    hasAnimatedRef.current = true;
+    const t = setTimeout(() => setHasAnimated(true), 0);
+    return () => clearTimeout(t);
   }, []);
 
   // Memoize the animation duration calculation
@@ -73,7 +73,7 @@ const LocationMarquee = memo(function LocationMarquee() {
 
   return (
     <motion.div
-      initial={hasAnimatedRef.current ? false : { opacity: 0, x: 50 }}
+      initial={hasAnimated ? false : { opacity: 0, x: 50 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.6, delay: 0.2, ease: [0.21, 0.47, 0.32, 0.98] }}
       className="mt-8 relative w-full max-w-full"
@@ -116,10 +116,10 @@ const LocationMarquee = memo(function LocationMarquee() {
 });
 
 export default function Hero() {
-  const hasAnimatedRef = useRef(false);
-
+  const [hasAnimated, setHasAnimated] = useState(false);
   useEffect(() => {
-    hasAnimatedRef.current = true;
+    const t = setTimeout(() => setHasAnimated(true), 0);
+    return () => clearTimeout(t);
   }, []);
 
   return (
@@ -147,7 +147,7 @@ export default function Hero() {
       {/* Content */}
       <div className="relative text-center">
         <motion.div
-          initial={hasAnimatedRef.current ? false : { opacity: 0, y: 20 }}
+          initial={hasAnimated ? false : { opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.21, 0.47, 0.32, 0.98] }}
         >
@@ -160,9 +160,9 @@ export default function Hero() {
         </motion.div>
 
         <motion.p
-          initial={hasAnimatedRef.current ? false : { opacity: 0, y: 20 }}
+          initial={hasAnimated ? false : { opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: hasAnimatedRef.current ? 0 : 0.1, ease: [0.21, 0.47, 0.32, 0.98] }}
+          transition={{ duration: 0.5, delay: hasAnimated ? 0 : 0.1, ease: [0.21, 0.47, 0.32, 0.98] }}
           className="mt-4 text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto"
         >
           Finde alle Abfuhrtermine für deine Adresse.
@@ -172,9 +172,9 @@ export default function Hero() {
 
         {/* Waste Type Pills - no stagger animation on revisit */}
         <motion.div
-          initial={hasAnimatedRef.current ? false : { opacity: 0, y: 20 }}
+          initial={hasAnimated ? false : { opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: hasAnimatedRef.current ? 0 : 0.15, ease: [0.21, 0.47, 0.32, 0.98] }}
+          transition={{ duration: 0.5, delay: hasAnimated ? 0 : 0.15, ease: [0.21, 0.47, 0.32, 0.98] }}
           className="mt-6 flex flex-wrap justify-center gap-2"
         >
           {wasteIcons.map((item) => (

@@ -53,7 +53,7 @@ const itemVariants = {
   },
 };
 
-interface StaggerItemProps extends HTMLMotionProps<"div"> {}
+type StaggerItemProps = HTMLMotionProps<"div">;
 
 export function StaggerItem({ children, className, ...props }: StaggerItemProps) {
   return (

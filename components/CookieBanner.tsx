@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Cookie, Shield, BarChart3, Check, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -250,12 +251,12 @@ export default function CookieBanner() {
               <div className="px-5 pb-4 pt-0">
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   Weitere Informationen findest du in unserer{' '}
-                  <a
+                  <Link
                     href="/datenschutz"
                     className="underline underline-offset-2 hover:text-primary transition-colors"
                   >
                     Datenschutzerklärung
-                  </a>
+                  </Link>
                   .
                 </p>
               </div>

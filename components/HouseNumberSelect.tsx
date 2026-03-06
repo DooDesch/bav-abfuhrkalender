@@ -33,7 +33,7 @@ export default function HouseNumberSelect({
   street,
   streetId,
   streetSelected = false,
-  value,
+  value, // used for controlled usage; display derived from valueId
   valueId,
   onChange,
   onRequiredChange,
@@ -56,7 +56,8 @@ export default function HouseNumberSelect({
 
   // Track fetch key to avoid refetching for same location+street
   const fetchKeyRef = useRef<string>('');
-  
+  const hasDataForKeyRef = useRef(false);
+
   // Fetch house numbers only when a complete street has been selected
   // Debounced to prevent excessive API calls
   useEffect(() => {
@@ -72,17 +73,21 @@ export default function HouseNumberSelect({
 
     // Only fetch when a street has been explicitly selected from autocomplete
     if (!trimmedLocation || !trimmedStreet || !streetSelected) {
-      // Don't clear if we already have data for this key (prevents flicker on re-render)
       if (fetchKeyRef.current !== fetchKey) {
-        setHouseNumbers([]);
-        setIsRequired(false);
-        onRequiredChange?.(false);
+        fetchKeyRef.current = fetchKey;
+        hasDataForKeyRef.current = false;
+        const t = setTimeout(() => {
+          setHouseNumbers([]);
+          setIsRequired(false);
+          onRequiredChange?.(false);
+        }, 0);
+        return () => clearTimeout(t);
       }
       return;
     }
 
     // Skip fetch if we already have data for this exact location+street
-    if (fetchKeyRef.current === fetchKey && houseNumbers.length > 0) {
+    if (fetchKeyRef.current === fetchKey && hasDataForKeyRef.current) {
       return;
     }
 
@@ -104,14 +109,16 @@ export default function HouseNumberSelect({
           if (!controller.signal.aborted) {
             const numbers = data.success && Array.isArray(data.data) ? data.data : [];
             const requiredStatus = data.required === true;
+            fetchKeyRef.current = fetchKey;
+            hasDataForKeyRef.current = true;
             setHouseNumbers(numbers);
             setIsRequired(requiredStatus);
             onRequiredChange?.(requiredStatus);
-            fetchKeyRef.current = fetchKey;
           }
         })
         .catch(() => {
           if (!controller.signal.aborted) {
+            hasDataForKeyRef.current = false;
             setHouseNumbers([]);
             setIsRequired(false);
             onRequiredChange?.(false);
@@ -130,9 +137,7 @@ export default function HouseNumberSelect({
         clearTimeout(debounceRef.current);
       }
     };
-  // Remove valueId from dependencies to prevent refetch when value changes
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location, street, streetSelected, onRequiredChange]);
+  }, [location, street, streetId, streetSelected, onRequiredChange]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -222,7 +227,7 @@ export default function HouseNumberSelect({
   // When required, keep field enabled so user can open dropdown (even if list is empty e.g. API issue)
   const isDisabled = loading || (!hasOptions && !isRequired);
   const selectedOption = houseNumbers.find((h) => String(h.id) === String(valueId));
-  const displayValue = selectedOption?.name || (loading ? 'Lade Hausnummern...' : hasOptions ? 'Hausnummer wählen' : isRequired ? 'Hausnummer erforderlich' : 'Keine Hausnummer nötig');
+  const displayValue = selectedOption?.name ?? value ?? (loading ? 'Lade Hausnummern...' : hasOptions ? 'Hausnummer wählen' : isRequired ? 'Hausnummer erforderlich' : 'Keine Hausnummer nötig');
 
   const highlightedOptionId =
     highlightedIndex >= 0 && houseNumbers[highlightedIndex]
@@ -256,7 +261,8 @@ export default function HouseNumberSelect({
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-controls={listId}
-          aria-activedescendant={highlightedOptionId}
+          aria-activedescendant={open ? highlightedOptionId : undefined}
+          role="combobox"
           className={cn(
             'flex h-11 w-full items-center rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm pl-10 pr-10 py-2 text-base text-left ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200',
             open && 'ring-2 ring-primary ring-offset-2',

@@ -99,13 +99,17 @@ export default function Autocomplete<TOption extends AutocompleteOption = Autoco
   const id = idProp ?? listId;
 
   const hasLoadOptions = typeof loadOptions === 'function';
+  const loadOptionsRef = useRef(loadOptions);
+  loadOptionsRef.current = loadOptions;
+  const loadOptionsDepsKey = JSON.stringify(loadOptionsDeps);
 
   useEffect(() => {
-    if (!hasLoadOptions || !loadOptions) return;
+    const fn = loadOptionsRef.current;
+    if (!hasLoadOptions || !fn) return;
 
     const controller = new AbortController();
     setLoading(true);
-    loadOptions(controller.signal)
+    fn(controller.signal)
       .then((data) => {
         if (!controller.signal.aborted) setOptions(Array.isArray(data) ? data : []);
       })
@@ -116,8 +120,7 @@ export default function Autocomplete<TOption extends AutocompleteOption = Autoco
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasLoadOptions, ...loadOptionsDeps]);
+  }, [hasLoadOptions, loadOptionsDepsKey]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {

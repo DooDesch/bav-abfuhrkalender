@@ -46,10 +46,10 @@ export async function GET() {
   const statuses = await Promise.all(entries.map((p) => ping(PING_URLS[p])));
 
   const providers: ProviderStatusResponse['providers'] = {};
-  for (let i = 0; i < entries.length; i++) {
-    const id = entries[i];
-    providers[id] = { status: statuses[i], name: PROVIDERS[id].name };
-  }
+  entries.forEach((id, i) => {
+    const status = statuses[i] ?? 'down';
+    providers[id] = { status, name: PROVIDERS[id].name };
+  });
 
   const result: ProviderStatusResponse = {
     providers,

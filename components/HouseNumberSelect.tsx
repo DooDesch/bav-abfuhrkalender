@@ -227,7 +227,8 @@ export default function HouseNumberSelect({
   // When required, keep field enabled so user can open dropdown (even if list is empty e.g. API issue)
   const isDisabled = loading || (!hasOptions && !isRequired);
   const selectedOption = houseNumbers.find((h) => String(h.id) === String(valueId));
-  const displayValue = selectedOption?.name ?? value ?? (loading ? 'Lade Hausnummern...' : hasOptions ? 'Hausnummer wählen' : isRequired ? 'Hausnummer erforderlich' : 'Keine Hausnummer nötig');
+  const placeholderText = loading ? 'Lade Hausnummern...' : hasOptions ? 'Hausnummer wählen' : isRequired ? 'Hausnummer erforderlich' : 'Keine Hausnummer nötig';
+  const displayValue = selectedOption?.name ?? (value?.trim() ? value : placeholderText);
 
   const highlightedOptionId =
     highlightedIndex >= 0 && houseNumbers[highlightedIndex]

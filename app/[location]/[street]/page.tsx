@@ -186,6 +186,7 @@ export default async function StreetPage({ params, searchParams }: StreetPagePro
             data={data}
             location={originalLocationName}
             street={data.street.name}
+            streetId={streetId}
             houseNumber={
               houseNumberId
                 ? data.houseNumbers.find((h) => String(h.id) === houseNumberId)?.name

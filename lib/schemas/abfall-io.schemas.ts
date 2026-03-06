@@ -122,8 +122,9 @@ export function parseSelectOptions(
 
   // If a specific select name is provided, extract only that select's content
   if (selectName) {
+    const escapedName = selectName.replace(/[[\]\\^$.*+?()|]/g, '\\$&');
     const selectRegex = new RegExp(
-      `<select[^>]*name=["']${selectName}["'][^>]*>([\\s\\S]*?)<\\/select>`,
+      `<select[^>]*name=["']${escapedName}["'][^>]*>([\\s\\S]*?)<\\/select>`,
       'i'
     );
     const selectMatch = html.match(selectRegex);

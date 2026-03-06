@@ -374,6 +374,8 @@ interface WasteCollectionCalendarProps {
   data: WasteCalendarResponse;
   location?: string;
   street?: string;
+  /** Street API ID for house number lookup when returning to form */
+  streetId?: string;
   /** House number display name (e.g., "2") */
   houseNumber?: string;
   /** House number API ID for persistence */
@@ -384,19 +386,19 @@ export default function WasteCollectionCalendar({
   data,
   location: locationProp,
   street: streetProp,
+  streetId: streetIdProp,
   houseNumber: houseNumberProp,
   houseNumberId: houseNumberIdProp,
 }: WasteCollectionCalendarProps) {
   const setLastAddress = useAddressStore((s) => s.setLastAddress);
 
-  // Save current address as last used when calendar is displayed
+  // Save current address as last used when calendar is displayed (so back to form restores correctly)
   useEffect(() => {
     const loc = locationProp?.trim();
     const str = streetProp?.trim();
     if (!loc || !str) return;
-    // Include house number info so it persists when navigating back
-    setLastAddress(loc, str, houseNumberProp, houseNumberIdProp);
-  }, [locationProp, streetProp, houseNumberProp, houseNumberIdProp, setLastAddress]);
+    setLastAddress(loc, str, streetIdProp, houseNumberProp, houseNumberIdProp);
+  }, [locationProp, streetProp, streetIdProp, houseNumberProp, houseNumberIdProp, setLastAddress]);
 
   // Get fractions that actually appear in appointments
   const availableFractionIds = useMemo(

@@ -1,11 +1,10 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, ArrowRight, Navigation, Locate } from 'lucide-react';
+import { MapPin, ArrowRight, Navigation } from 'lucide-react';
 import { useAddressStore } from '@/lib/stores/address.store';
-import { useLocationsWithProximity } from '@/lib/hooks/useLocationsWithProximity';
 import { createStreetSlug } from '@/lib/utils/seo';
 import LocationAutocomplete from '@/components/LocationAutocomplete';
 import StreetAutocomplete from '@/components/StreetAutocomplete';
@@ -13,15 +12,7 @@ import HouseNumberSelect from '@/components/HouseNumberSelect';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
-interface AddressSearchFormProps {
-  defaultLocation?: string;
-  defaultStreet?: string;
-}
-
-export default function AddressSearchForm({
-  defaultLocation = '',
-  defaultStreet = '',
-}: AddressSearchFormProps) {
+export default function AddressSearchForm() {
   const router = useRouter();
   const location = useAddressStore((s) => s.location);
   const street = useAddressStore((s) => s.street);
@@ -31,90 +22,38 @@ export default function AddressSearchForm({
   const setLocation = useAddressStore((s) => s.setLocation);
   const setStreet = useAddressStore((s) => s.setStreet);
   const setHouseNumber = useAddressStore((s) => s.setHouseNumber);
-  const setAddress = useAddressStore((s) => s.setAddress);
-  const getLastAddress = useAddressStore((s) => s.getLastAddress);
   const setLastAddress = useAddressStore((s) => s.setLastAddress);
-  const restoreAddress = useAddressStore((s) => s.restoreAddress);
   const hasHydrated = useAddressStore((s) => s._hasHydrated);
-  
-  // Track if we've already auto-filled from geolocation
-  const autoFilledRef = useRef(false);
-  const [wasAutoFilled, setWasAutoFilled] = useState(false);
-  
-  // Track if house number selection is required
+  const getLastAddress = useAddressStore((s) => s.getLastAddress);
+  const restoreAddress = useAddressStore((s) => s.restoreAddress);
+
   const [houseNumberRequired, setHouseNumberRequired] = useState(false);
-  
-  // Track if a street was explicitly selected from autocomplete
-  const [streetSelected, setStreetSelected] = useState(false);
-  
-  // Track if a location was explicitly selected from autocomplete
-  const [locationSelected, setLocationSelected] = useState(false);
-  
-  // Track if we've already initialized from localStorage
-  const initializedRef = useRef(false);
-  
-  // Get nearest location from geolocation (lazy - triggered on location input focus)
-  const { nearestLocation, isGeolocating, requestGeolocation } = useLocationsWithProximity();
+  // Restore "selected" flags when store has full address (e.g. after navigation back or after hydration restore)
+  const hasCompleteAddressInStore = () => {
+    const s = useAddressStore.getState();
+    return !!(s.streetId && s.location?.trim() && s.street?.trim());
+  };
+  const [streetSelected, setStreetSelected] = useState(hasCompleteAddressInStore);
+  const [locationSelected, setLocationSelected] = useState(hasCompleteAddressInStore);
 
-  // Initialize with defaults or last address (wait for hydration)
+  // After hydration: if form is empty but we have a last address (e.g. after reload), restore it so form and HouseNumberSelect show correct state
   useEffect(() => {
-    // Wait for store to hydrate from localStorage
     if (!hasHydrated) return;
-    
-    // Only initialize once
-    if (initializedRef.current) return;
-    initializedRef.current = true;
-    
-    if (defaultLocation !== '' || defaultStreet !== '') {
-      setAddress(defaultLocation, defaultStreet);
-      // If we have a default location, consider it as selected
-      if (defaultLocation) {
-        setLocationSelected(true);
-      }
-      // If we have a default street, consider it as selected
-      if (defaultStreet) {
-        setStreetSelected(true);
-      }
-    } else {
-      const last = getLastAddress();
-      if (last.location || last.street) {
-        // Restore all address fields in one atomic update (prevents flicker)
-        restoreAddress(last);
-        // If we have a saved location, consider it as selected
-        if (last.location) {
-          setLocationSelected(true);
-        }
-        // If we have a saved street, consider it as selected
-        if (last.street) {
-          setStreetSelected(true);
-        }
-      }
+    const last = getLastAddress();
+    const hasLast = last.location?.trim() || last.street?.trim();
+    const formEmpty = !location.trim() && !street.trim();
+    if (formEmpty && hasLast) {
+      restoreAddress(last);
     }
-  }, [hasHydrated, defaultLocation, defaultStreet, setAddress, restoreAddress, getLastAddress]);
+  }, [hasHydrated, getLastAddress, restoreAddress, location, street]);
 
-  // Auto-fill location from geolocation if no location is set
+  // When store has full address (after restore or navigation back), ensure HouseNumberSelect fetches house numbers
   useEffect(() => {
-    // Only auto-fill once, and only if:
-    // - We haven't auto-filled yet
-    // - There's no default location
-    // - There's no current location in the store
-    // - We have a nearest location with valid distance (coordinates loaded)
-    // - Geolocation check is complete
-    if (
-      !autoFilledRef.current &&
-      !defaultLocation &&
-      !location &&
-      nearestLocation &&
-      nearestLocation.distance !== undefined && // Ensure coordinates are loaded
-      !isGeolocating
-    ) {
-      autoFilledRef.current = true;
-      setLocation(nearestLocation.name);
-      setWasAutoFilled(true);
-      // Auto-filled location is a valid selection
+    if (streetId && location.trim() && street.trim()) {
+      setStreetSelected(true);
       setLocationSelected(true);
     }
-  }, [nearestLocation, isGeolocating, defaultLocation, location, setLocation]);
+  }, [location, street, streetId]);
 
   // Handle location input change (typing)
   const handleLocationChange = useCallback(
@@ -228,14 +167,7 @@ export default function AddressSearchForm({
                   Adresse eingeben
                 </h2>
                 <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                  {wasAutoFilled ? (
-                    <span className="inline-flex items-center gap-1">
-                      <Locate className="h-3 w-3 text-green-500" />
-                      Ort automatisch erkannt
-                    </span>
-                  ) : (
-                    'Wähle deinen Ort und deine Straße'
-                  )}
+                  Wähle deinen Ort und deine Straße
                 </p>
               </div>
             </div>
@@ -246,7 +178,6 @@ export default function AddressSearchForm({
                 value={location}
                 onChange={handleLocationChange}
                 onSelect={handleLocationSelect}
-                onFocus={requestGeolocation}
                 id="location"
                 label="Ort"
                 placeholder="z. B. Wermelskirchen"
@@ -269,12 +200,12 @@ export default function AddressSearchForm({
               />
             </div>
 
-            {/* House Number Select (only shown when required) */}
+            {/* House Number Select - treat as "street selected" when we have full address (store restore or nav back) so it fetches immediately */}
             <HouseNumberSelect
               location={location}
               street={street}
               streetId={streetId || undefined}
-              streetSelected={streetSelected}
+              streetSelected={streetSelected || !!(streetId && location.trim() && street.trim())}
               value={houseNumber}
               valueId={houseNumberId}
               onChange={handleHouseNumberChange}

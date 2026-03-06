@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Play, RefreshCw, Clock, CheckCircle, XCircle, Code2, Zap } from 'lucide-react';
 import { useAddressStore } from '@/lib/stores/address.store';
@@ -28,16 +28,6 @@ export default function PlaygroundPage() {
   const setLocation = useAddressStore((s) => s.setLocation);
   const setStreet = useAddressStore((s) => s.setStreet);
   const setLastAddress = useAddressStore((s) => s.setLastAddress);
-  const getLastAddress = useAddressStore((s) => s.getLastAddress);
-  const setAddress = useAddressStore((s) => s.setAddress);
-
-  useEffect(() => {
-    if (location !== '' || street !== '') return;
-    const last = getLastAddress();
-    if (last.location || last.street) {
-      setAddress(last.location, last.street);
-    }
-  }, [getLastAddress, setAddress, location, street]);
 
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<ApiResponse | null>(null);

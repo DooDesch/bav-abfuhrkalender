@@ -512,13 +512,19 @@ export class AbfallIOService {
         currentToken
       );
 
-      // Check if house number selection is available
-      if (!step3.html.includes('name="f_id_strasse_hnr"')) {
+      // Check if house number selection is available (API may use name="f_id_strasse_hnr" or name="f_id_strasse_hnr[]")
+      const hasHnrField =
+        step3.html.includes('f_id_strasse_hnr"') ||
+        step3.html.includes('f_id_strasse_hnr[]');
+      if (!hasHnrField) {
         return []; // No house numbers required for this street
       }
 
-      // Parse house number options
-      const options = parseSelectOptions(step3.html, 'f_id_strasse_hnr');
+      // Parse house number options (try both select names used by AbfallIO)
+      let options = parseSelectOptions(step3.html, 'f_id_strasse_hnr');
+      if (options.length === 0) {
+        options = parseSelectOptions(step3.html, 'f_id_strasse_hnr[]');
+      }
 
       return options.map((opt) => ({
         id: opt.value,

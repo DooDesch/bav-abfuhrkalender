@@ -211,7 +211,9 @@ export function isValidLocationSlug(slug: string): boolean {
  * burscheid -> Burscheid, hückeswagen -> Hückeswagen
  */
 export function getLocationNameFromSlug(slug: string): string | null {
-  return ALL_LOCATIONS.find((loc) => loc.toLowerCase() === slug.toLowerCase()) || null;
+  let normalizedSlug = slug;
+  try { normalizedSlug = decodeURIComponent(slug); } catch { /* keep original slug */ }
+  return ALL_LOCATIONS.find((loc) => loc.toLowerCase() === normalizedSlug.toLowerCase()) || null;
 }
 
 /**

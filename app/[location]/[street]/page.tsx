@@ -3,7 +3,9 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Home, MapPin } from 'lucide-react';
 import StartLink from '@/components/StartLink';
-import { getWasteCollectionData as getProviderWasteData } from '@/lib/services/provider-registry';
+import { getWasteCollectionData as getProviderWasteData, resolveProvider, PROVIDERS } from '@/lib/services/provider-registry';
+import { BAVApiError } from '@/lib/types/bav-api.types';
+import { AbfallIOApiError } from '@/lib/types/abfall-io.types';
 import { cacheService } from '@/lib/services/cache.service';
 import { buildWasteCollectionCacheKey } from '@/lib/utils/cache-keys';
 import {
@@ -107,9 +109,15 @@ export default async function StreetPage({ params, searchParams }: StreetPagePro
   try {
     data = await getWasteCollectionData(originalLocationName, streetName, streetId, houseNumberId);
   } catch (err) {
-    error =
-      err instanceof Error ? err.message : 'Fehler beim Laden der Daten';
     console.error('Error fetching waste collection data:', err);
+
+    if (err instanceof BAVApiError || err instanceof AbfallIOApiError) {
+      const provider = resolveProvider(originalLocationName);
+      const name = PROVIDERS[provider].name;
+      error = `Der Abfuhrkalender-Dienstleister (${name}) ist derzeit nicht erreichbar. Bitte später erneut versuchen.`;
+    } else {
+      error = err instanceof Error ? err.message : 'Fehler beim Laden der Daten';
+    }
   }
 
   return (
@@ -152,7 +160,7 @@ export default async function StreetPage({ params, searchParams }: StreetPagePro
                 </svg>
               </div>
               <h1 className="mb-2 text-xl font-bold text-red-900 dark:text-red-400">
-                Straße nicht gefunden
+                Daten nicht verfügbar
               </h1>
               <p className="mb-6 text-sm text-red-700 dark:text-red-300">
                 {error}

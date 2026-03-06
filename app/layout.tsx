@@ -10,6 +10,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getBaseUrl, getSeoKeywords, getCurrentYear, getProviderFullNames } from "@/lib/utils/seo";
 import JsonLd from "@/components/JsonLd";
+import ProviderStatusBanner from "@/components/ProviderStatusBanner";
 import CookieBanner from "@/components/CookieBanner";
 import ConsentSettings from "@/components/ConsentSettings";
 import ConditionalAnalytics from "@/components/ConditionalAnalytics";
@@ -123,6 +124,7 @@ export default function RootLayout({
           <Suspense fallback={<NavigationFallback />}>
             <Navigation />
           </Suspense>
+          <ProviderStatusBanner />
           <ErrorBoundary>
             {children}
           </ErrorBoundary>

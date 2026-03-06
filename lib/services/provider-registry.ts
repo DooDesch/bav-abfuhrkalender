@@ -3,6 +3,13 @@ import { getBAVApiService } from '@/lib/services/bav-api.service';
 import { getAbfallIOService } from '@/lib/services/abfall-io.service';
 import type { Location, WasteCalendarResponse } from '@/lib/types/bav-api.types';
 import asoMappings from '@/lib/data/aso-location-mappings.json';
+import {
+  getLocationsFallback,
+  setLocationsFallback,
+  getStreetsFallback,
+  setStreetsFallback,
+  type FallbackLocation,
+} from '@/lib/services/fallback-cache.service';
 
 // ============================================================================
 // Provider Enum and Types
@@ -115,46 +122,85 @@ export function resolveProvider(locationName: string): WasteProvider {
 // Unified Data Fetching
 // ============================================================================
 
+function fallbackLocationToProvider(
+  loc: FallbackLocation
+): LocationWithProvider {
+  const provider =
+    loc.provider === 'aso'
+      ? WasteProvider.ABFALL_IO_ASO
+      : WasteProvider.BAV;
+  return { id: loc.id, name: loc.name, provider };
+}
+
 /**
- * Get all locations from all providers
- * Locations are tagged with their provider for later resolution
+ * Get all locations from all providers.
+ * Uses fallback cache (static seed + last good) when provider fails so autocomplete always has data.
  */
 export async function getAllLocations(): Promise<LocationWithProvider[]> {
   const bavService = getBAVApiService();
 
-  // Fetch from both providers in parallel
-  const [bavLocations, asoLocationNames] = await Promise.all([
-    bavService.getLocations().catch((error) => {
-      console.error('Failed to fetch BAV locations:', error);
-      return [] as Location[];
-    }),
-    // ASO locations come from static mappings for now
-    // This avoids an extra API call and is more reliable
-    Promise.resolve(getASOLocationNames()),
-  ]);
+  try {
+    const [bavLocations, asoLocationNames] = await Promise.all([
+      bavService.getLocations().catch((error) => {
+        console.error('Failed to fetch BAV locations:', error);
+        return [] as Location[];
+      }),
+      Promise.resolve(getASOLocationNames()),
+    ]);
 
-  // Register BAV locations
-  registerLocations(bavLocations, WasteProvider.BAV);
+    const taggedBavLocations: LocationWithProvider[] = bavLocations.map(
+      (loc) => ({ ...loc, provider: WasteProvider.BAV })
+    );
+    const taggedAsoLocations: LocationWithProvider[] = asoLocationNames.map(
+      (name, index) => ({
+        id: 10000 + index,
+        name,
+        provider: WasteProvider.ABFALL_IO_ASO,
+      })
+    );
 
-  // Convert and tag locations
-  const taggedBavLocations: LocationWithProvider[] = bavLocations.map((loc) => ({
-    ...loc,
-    provider: WasteProvider.BAV,
-  }));
+    const result = [...taggedBavLocations, ...taggedAsoLocations];
 
-  // Create ASO locations from mappings
-  const taggedAsoLocations: LocationWithProvider[] = asoLocationNames.map(
-    (name, index) => ({
-      id: 10000 + index, // Use high IDs to avoid collision with BAV
-      name,
-      provider: WasteProvider.ABFALL_IO_ASO,
-    })
-  );
+    // Update fallback so next time we have fresh data if provider fails
+    if (result.length > 0) {
+      setLocationsFallback(
+        result.map((loc) => ({
+          id: loc.id,
+          name: loc.name,
+          provider: loc.provider === WasteProvider.ABFALL_IO_ASO ? 'aso' : 'bav',
+        }))
+      );
+    }
 
-  // Register ASO locations
-  registerLocations(taggedAsoLocations, WasteProvider.ABFALL_IO_ASO);
+    registerLocations(taggedBavLocations, WasteProvider.BAV);
+    registerLocations(taggedAsoLocations, WasteProvider.ABFALL_IO_ASO);
 
-  return [...taggedBavLocations, ...taggedAsoLocations];
+    // If provider returned empty (e.g. BAV down), serve fallback so UI always has locations
+    if (result.length === 0) {
+      const fallback = getLocationsFallback().map(fallbackLocationToProvider);
+      const byProvider = new Map<WasteProvider, LocationWithProvider[]>();
+      for (const loc of fallback) {
+        const list = byProvider.get(loc.provider) ?? [];
+        list.push(loc);
+        byProvider.set(loc.provider, list);
+      }
+      byProvider.forEach((locs, provider) => registerLocations(locs, provider));
+      return fallback;
+    }
+
+    return result;
+  } catch (error) {
+    console.error('getAllLocations failed, using fallback:', error);
+    const fallback = getLocationsFallback().map(fallbackLocationToProvider);
+    const byProvider = new Map<WasteProvider, LocationWithProvider[]>();
+    for (const loc of fallback) {
+      const list = byProvider.get(loc.provider) ?? [];
+      list.push(loc);
+      byProvider.set(loc.provider, list);
+    }
+    byProvider.forEach((locs, provider) => registerLocations(locs, provider));
+    return fallback;
+  }
 }
 
 /**
@@ -299,43 +345,50 @@ export async function getHouseNumbers(
 }
 
 /**
- * Get streets for a location
- * Automatically resolves the correct provider
+ * Get streets for a location.
+ * Uses fallback cache when provider fails so autocomplete can still show last known streets.
  */
 export async function getStreets(
   locationName: string
 ): Promise<{ id: number | string; name: string }[]> {
   const provider = resolveProvider(locationName);
 
-  switch (provider) {
-    case WasteProvider.BAV: {
-      const bavService = getBAVApiService();
-      const location = await bavService.getLocationByName(locationName);
-      return bavService.getStreets(location.id);
-    }
+  try {
+    let streets: { id: number | string; name: string }[];
 
-    case WasteProvider.ABFALL_IO_ASO: {
-      const asoService = getAbfallIOService(ABFALL_IO_ASO_KEY);
-
-      // Get the mapping for this location
-      const mapping = (asoMappings as Record<string, { f_id_kommune: string; f_id_bezirk?: string }>)[locationName];
-
-      if (!mapping) {
-        throw new Error(`No mapping found for ASO location: ${locationName}`);
+    switch (provider) {
+      case WasteProvider.BAV: {
+        const bavService = getBAVApiService();
+        const location = await bavService.getLocationByName(locationName);
+        streets = await bavService.getStreets(location.id);
+        break;
       }
 
-      // Use getStreetsWithBezirk to handle both cases (with and without bezirk)
-      const streets = await asoService.getStreetsWithBezirk(
-        mapping.f_id_kommune,
-        mapping.f_id_bezirk
-      );
-      return streets.map((s) => ({
-        id: s.id,
-        name: s.name,
-      }));
+      case WasteProvider.ABFALL_IO_ASO: {
+        const asoService = getAbfallIOService(ABFALL_IO_ASO_KEY);
+        const mapping = (asoMappings as Record<string, { f_id_kommune: string; f_id_bezirk?: string }>)[locationName];
+        if (!mapping) {
+          throw new Error(`No mapping found for ASO location: ${locationName}`);
+        }
+        const list = await asoService.getStreetsWithBezirk(
+          mapping.f_id_kommune,
+          mapping.f_id_bezirk
+        );
+        streets = list.map((s) => ({ id: s.id, name: s.name }));
+        break;
+      }
+
+      default:
+        throw new Error(`Unknown provider: ${provider}`);
     }
 
-    default:
-      throw new Error(`Unknown provider: ${provider}`);
+    if (streets.length > 0) {
+      setStreetsFallback(locationName, streets);
+    }
+    return streets;
+  } catch (error) {
+    console.error(`getStreets failed for ${locationName}, using fallback:`, error);
+    const fallback = getStreetsFallback(locationName);
+    return fallback ?? [];
   }
 }

@@ -170,6 +170,7 @@ export class BAVApiService {
   async getHouseNumbersByStreet(
     streetId: number
   ): Promise<HouseNumber[]> {
+    void streetId; // reserved for future API use
     // The API doesn't provide house numbers separately
     // Collection dates can be fetched directly by streetId
     // Return empty array for now
@@ -225,8 +226,9 @@ export class BAVApiService {
    */
   async getCollectionDates(
     streetId: number,
-    _houseNumberId?: number
+    houseNumberId?: number
   ): Promise<Appointment[]> {
+    void houseNumberId; // reserved for future API use
     try {
       // Use the correct endpoint format: /strassen/{streetId}/termine
       const url = `${this.baseUrl}/strassen/${streetId}/termine`;

@@ -73,8 +73,13 @@ export default function AppointmentList({
     });
   };
 
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
+  // Stable "today" for useMemo deps (changes once per calendar day)
+  const today = new Date().toDateString();
+  const now = useMemo(() => {
+    const d = new Date(today);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, [today]);
 
   const filteredAppointments = selectedFractions
     ? appointments.filter((t) => selectedFractions.has(t.fractionId))

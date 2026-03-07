@@ -122,8 +122,9 @@ export function parseSelectOptions(
 
   // If a specific select name is provided, extract only that select's content
   if (selectName) {
+    const escapedName = selectName.replace(/[[\]\\^$.*+?()|]/g, '\\$&');
     const selectRegex = new RegExp(
-      `<select[^>]*name=["']${selectName}["'][^>]*>([\\s\\S]*?)<\\/select>`,
+      `<select[^>]*name=["']${escapedName}["'][^>]*>([\\s\\S]*?)<\\/select>`,
       'i'
     );
     const selectMatch = html.match(selectRegex);
@@ -440,10 +441,6 @@ export function parseWasteTypeCheckboxes(
   html: string
 ): Array<{ id: number; name: string }> {
   const wasteTypes: Array<{ id: number; name: string }> = [];
-
-  // Match checkbox inputs and their labels
-  const checkboxRegex =
-    /<input[^>]*type="checkbox"[^>]*name="f_id_abfalltyp_\d+"[^>]*value="(\d+)"[^>]*>[\s\S]*?<\/span>\s*<\/div>\s*<div class="awk-ui-input-tr">\s*<label[^>]*>(?:<span[^>]*>[^<]*<\/span>)?([^<]+)/gi;
 
   // Simpler approach: find labels that contain waste type names
   const labelRegex =

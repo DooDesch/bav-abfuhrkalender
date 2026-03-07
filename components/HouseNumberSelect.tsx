@@ -33,7 +33,7 @@ export default function HouseNumberSelect({
   street,
   streetId,
   streetSelected = false,
-  value,
+  value, // used for controlled usage; display derived from valueId
   valueId,
   onChange,
   onRequiredChange,
@@ -56,7 +56,8 @@ export default function HouseNumberSelect({
 
   // Track fetch key to avoid refetching for same location+street
   const fetchKeyRef = useRef<string>('');
-  
+  const hasDataForKeyRef = useRef(false);
+
   // Fetch house numbers only when a complete street has been selected
   // Debounced to prevent excessive API calls
   useEffect(() => {
@@ -72,17 +73,21 @@ export default function HouseNumberSelect({
 
     // Only fetch when a street has been explicitly selected from autocomplete
     if (!trimmedLocation || !trimmedStreet || !streetSelected) {
-      // Don't clear if we already have data for this key (prevents flicker on re-render)
       if (fetchKeyRef.current !== fetchKey) {
-        setHouseNumbers([]);
-        setIsRequired(false);
-        onRequiredChange?.(false);
+        fetchKeyRef.current = fetchKey;
+        hasDataForKeyRef.current = false;
+        const t = setTimeout(() => {
+          setHouseNumbers([]);
+          setIsRequired(false);
+          onRequiredChange?.(false);
+        }, 0);
+        return () => clearTimeout(t);
       }
       return;
     }
 
     // Skip fetch if we already have data for this exact location+street
-    if (fetchKeyRef.current === fetchKey && houseNumbers.length > 0) {
+    if (fetchKeyRef.current === fetchKey && hasDataForKeyRef.current) {
       return;
     }
 
@@ -104,17 +109,16 @@ export default function HouseNumberSelect({
           if (!controller.signal.aborted) {
             const numbers = data.success && Array.isArray(data.data) ? data.data : [];
             const requiredStatus = data.required === true;
+            fetchKeyRef.current = fetchKey;
+            hasDataForKeyRef.current = true;
             setHouseNumbers(numbers);
             setIsRequired(requiredStatus);
             onRequiredChange?.(requiredStatus);
-            fetchKeyRef.current = fetchKey;
-            
-            // Don't clear selection - trust the value from localStorage
-            // Only clear if this is a NEW street selection (no valueId yet)
           }
         })
         .catch(() => {
           if (!controller.signal.aborted) {
+            hasDataForKeyRef.current = false;
             setHouseNumbers([]);
             setIsRequired(false);
             onRequiredChange?.(false);
@@ -133,9 +137,7 @@ export default function HouseNumberSelect({
         clearTimeout(debounceRef.current);
       }
     };
-  // Remove valueId from dependencies to prevent refetch when value changes
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location, street, streetSelected, onRequiredChange]);
+  }, [location, street, streetId, streetSelected, onRequiredChange]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -221,15 +223,12 @@ export default function HouseNumberSelect({
     [open, houseNumbers, highlightedIndex, handleSelect, valueId]
   );
 
-  // Don't render if no house numbers are available
-  if (!isRequired && houseNumbers.length === 0) {
-    return null;
-  }
-
-  const isDisabled = loading || houseNumbers.length === 0;
+  const hasOptions = isRequired && houseNumbers.length > 0;
+  // When required, keep field enabled so user can open dropdown (even if list is empty e.g. API issue)
+  const isDisabled = loading || (!hasOptions && !isRequired);
   const selectedOption = houseNumbers.find((h) => String(h.id) === String(valueId));
-  // Show the passed-in value if we have one (from localStorage), even if options aren't loaded yet
-  const displayValue = selectedOption?.name || value || (loading ? 'Lade Hausnummern...' : 'Hausnummer wählen');
+  const placeholderText = loading ? 'Lade Hausnummern...' : hasOptions ? 'Hausnummer wählen' : isRequired ? 'Hausnummer erforderlich' : 'Keine Hausnummer nötig';
+  const displayValue = selectedOption?.name ?? (value?.trim() ? value : placeholderText);
 
   const highlightedOptionId =
     highlightedIndex >= 0 && houseNumbers[highlightedIndex]
@@ -263,7 +262,8 @@ export default function HouseNumberSelect({
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-controls={listId}
-          aria-activedescendant={highlightedOptionId}
+          aria-activedescendant={open ? highlightedOptionId : undefined}
+          role="combobox"
           className={cn(
             'flex h-11 w-full items-center rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm pl-10 pr-10 py-2 text-base text-left ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200',
             open && 'ring-2 ring-primary ring-offset-2',
@@ -292,44 +292,50 @@ export default function HouseNumberSelect({
             className="absolute z-[100] mt-2 max-h-60 w-full overflow-y-auto rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl py-1 shadow-xl"
             style={{ scrollbarGutter: 'stable' }}
           >
-            {houseNumbers.map((hn, index) => {
-              const isHighlighted = index === highlightedIndex;
-              const isSelected = String(valueId) === String(hn.id);
-              return (
-                <motion.li
-                  key={hn.id}
-                  id={`${listId}-option-${index}`}
-                  role="option"
-                  aria-selected={isSelected}
-                  tabIndex={-1}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.015 }}
-                  className={cn(
-                    'flex cursor-pointer items-center justify-between px-4 py-3 text-sm transition-colors',
-                    isHighlighted
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800',
-                    isSelected && 'font-medium'
-                  )}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    handleSelect(hn);
-                  }}
-                  onMouseEnter={() => setHighlightedIndex(index)}
-                >
-                  <span>{hn.name}</span>
-                  {isSelected && (
-                    <Check className="h-4 w-4 text-primary shrink-0" />
-                  )}
-                </motion.li>
-              );
-            })}
+            {houseNumbers.length > 0 ? (
+              houseNumbers.map((hn, index) => {
+                const isHighlighted = index === highlightedIndex;
+                const isSelected = String(valueId) === String(hn.id);
+                return (
+                  <motion.li
+                    key={hn.id}
+                    id={`${listId}-option-${index}`}
+                    role="option"
+                    aria-selected={isSelected}
+                    tabIndex={-1}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.015 }}
+                    className={cn(
+                      'flex cursor-pointer items-center justify-between px-4 py-3 text-sm transition-colors',
+                      isHighlighted
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800',
+                      isSelected && 'font-medium'
+                    )}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      handleSelect(hn);
+                    }}
+                    onMouseEnter={() => setHighlightedIndex(index)}
+                  >
+                    <span>{hn.name}</span>
+                    {isSelected && (
+                      <Check className="h-4 w-4 text-primary shrink-0" />
+                    )}
+                  </motion.li>
+                );
+              })
+            ) : (
+              <li className="px-4 py-3 text-sm text-zinc-500 dark:text-zinc-400" role="status">
+                Keine Hausnummern geladen. Bitte später erneut versuchen.
+              </li>
+            )}
           </motion.ul>
         )}
       </AnimatePresence>
 
-      {isRequired && !valueId && !loading && houseNumbers.length > 0 && (
+      {isRequired && !valueId && !loading && (
         <p className="text-xs text-amber-600 dark:text-amber-400">
           Für diese Straße wird eine Hausnummer benötigt
         </p>

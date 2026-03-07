@@ -232,20 +232,20 @@ export function useLocationsWithProximity(
 
   // Get user's position when requested (or auto-request, or from cache)
   useEffect(() => {
-    // If already loaded from module cache, use it immediately
     if (moduleUserCoordsLoaded) {
-      setUserCoords(moduleUserCoords);
-      setIsGeolocating(false);
-      return;
+      const t = setTimeout(() => {
+        setUserCoords(moduleUserCoords);
+        setIsGeolocating(false);
+      }, 0);
+      return () => clearTimeout(t);
     }
 
-    // Only fetch if auto-request is enabled or manually requested
     if (!autoRequestGeolocation && !geolocationRequested) {
       return;
     }
 
     let mounted = true;
-    setIsGeolocating(true);
+    const t = setTimeout(() => setIsGeolocating(true), 0);
 
     getUserPosition().then((coords) => {
       if (mounted) {
@@ -255,6 +255,7 @@ export function useLocationsWithProximity(
     });
 
     return () => {
+      clearTimeout(t);
       mounted = false;
     };
   }, [autoRequestGeolocation, geolocationRequested]);
@@ -263,11 +264,12 @@ export function useLocationsWithProximity(
   useEffect(() => {
     if (originalLocations.length === 0) return;
 
-    // Skip if already loaded from module cache
     if (moduleLocationCoordsLoaded && Object.keys(moduleLocationCoords).length > 0) {
-      setLocationCoords(moduleLocationCoords);
-      setCoordsLoaded(true);
-      return;
+      const t = setTimeout(() => {
+        setLocationCoords(moduleLocationCoords);
+        setCoordsLoaded(true);
+      }, 0);
+      return () => clearTimeout(t);
     }
 
     if (coordsLoaded) return;

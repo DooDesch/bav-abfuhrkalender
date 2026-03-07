@@ -6,11 +6,12 @@ import { getAllLocations } from '@/lib/services/provider-registry';
 
 // Cache all locations (from all providers) for 7 days (locations rarely change)
 // Uses Promise.all internally for parallel fetching - no performance penalty
+// Cache key includes 'v2' so that RSAG (and any future provider) gets included after deploy
 const getCachedLocations = unstable_cache(
   async () => {
     return getAllLocations();
   },
-  ['locations-all-providers'],
+  ['locations-all-providers-v2'],
   { revalidate: LOCATIONS_CACHE_TTL, tags: ['locations'] }
 );
 

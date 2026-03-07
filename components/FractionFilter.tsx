@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Filter, Check, X } from 'lucide-react';
+import { Filter, Check } from 'lucide-react';
 import type { Fraction } from '@/lib/types/bav-api.types';
 import { Button } from '@/components/ui/button';
 import {

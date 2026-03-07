@@ -2,17 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { unstable_cache } from 'next/cache';
 import { handleApiError } from '@/lib/utils/error-handler';
 import { CACHE_TTL } from '@/lib/config/constants';
-import { getHouseNumbers } from '@/lib/services/provider-registry';
-
-// Cache house numbers by location and street
-// Note: streetId is not part of cache key since same data is returned
-const getCachedHouseNumbers = unstable_cache(
-  async (locationName: string, streetName: string, streetId?: string) => {
-    return getHouseNumbers(locationName, streetName, streetId);
-  },
-  ['house-numbers-by-location-street'],
-  { revalidate: CACHE_TTL, tags: ['house-numbers'] }
-);
+import { getHouseNumbers, resolveProvider, WasteProvider } from '@/lib/services/provider-registry';
 
 /**
  * GET /api/house-numbers?location=<Ort>&street=<Straße>&sid=<StraßenID>
@@ -49,14 +39,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // streetId allows skipping expensive street lookup if provided
-    const houseNumbers = await getCachedHouseNumbers(locationName, streetName, streetId);
-    
+    // Cache per location+street+streetId so ASO and BAV don't share a result
+    const houseNumbers = await unstable_cache(
+      () => getHouseNumbers(locationName, streetName, streetId),
+      ['house-numbers', locationName, streetName, streetId ?? ''],
+      { revalidate: CACHE_TTL, tags: ['house-numbers'] }
+    )();
+
+    // ASO always requires house number; BAV and RSAG only when the API returns a list
+    const provider = resolveProvider(locationName);
+    const required =
+      provider === WasteProvider.ABFALL_IO_ASO
+        ? true
+        : provider === WasteProvider.BAV
+          ? houseNumbers.length > 0
+          : false;
+
     return NextResponse.json({
       success: true,
       data: houseNumbers,
-      // Include a flag to help the frontend know if selection is required
-      required: houseNumbers.length > 0,
+      required,
     });
   } catch (error) {
     return handleApiError(error, 'Failed to fetch house numbers');

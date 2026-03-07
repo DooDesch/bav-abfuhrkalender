@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   WasteProvider,
   PROVIDERS,
   getASOLocationNames,
   isASOLocation,
+  isRSAGLocation,
   resolveProvider,
   registerLocations,
 } from './provider-registry';
@@ -17,6 +18,10 @@ describe('Provider Registry', () => {
     it('should have AbfallIO ASO provider', () => {
       expect(WasteProvider.ABFALL_IO_ASO).toBe('abfall_io_aso');
     });
+
+    it('should have RSAG provider', () => {
+      expect(WasteProvider.RSAG).toBe('rsag');
+    });
   });
 
   describe('PROVIDERS configuration', () => {
@@ -28,6 +33,11 @@ describe('Provider Registry', () => {
     it('should have configuration for ASO', () => {
       expect(PROVIDERS[WasteProvider.ABFALL_IO_ASO]).toBeDefined();
       expect(PROVIDERS[WasteProvider.ABFALL_IO_ASO].name).toBe('ASO');
+    });
+
+    it('should have configuration for RSAG', () => {
+      expect(PROVIDERS[WasteProvider.RSAG]).toBeDefined();
+      expect(PROVIDERS[WasteProvider.RSAG].name).toBe('RSAG');
     });
   });
 
@@ -70,10 +80,33 @@ describe('Provider Registry', () => {
     });
   });
 
+  describe('isRSAGLocation', () => {
+    it('should return true for RSAG locations', () => {
+      expect(isRSAGLocation('Siegburg')).toBe(true);
+      expect(isRSAGLocation('Troisdorf')).toBe(true);
+      expect(isRSAGLocation('Sankt Augustin')).toBe(true);
+    });
+
+    it('should be case-insensitive', () => {
+      expect(isRSAGLocation('siegburg')).toBe(true);
+      expect(isRSAGLocation('SIEGBURG')).toBe(true);
+    });
+
+    it('should return false for non-RSAG locations', () => {
+      expect(isRSAGLocation('Burscheid')).toBe(false);
+      expect(isRSAGLocation('Lilienthal')).toBe(false);
+    });
+  });
+
   describe('resolveProvider', () => {
     it('should resolve ASO locations to ABFALL_IO_ASO provider', () => {
       expect(resolveProvider('Lilienthal')).toBe(WasteProvider.ABFALL_IO_ASO);
       expect(resolveProvider('Worpswede')).toBe(WasteProvider.ABFALL_IO_ASO);
+    });
+
+    it('should resolve RSAG locations to RSAG provider', () => {
+      expect(resolveProvider('Siegburg')).toBe(WasteProvider.RSAG);
+      expect(resolveProvider('Troisdorf')).toBe(WasteProvider.RSAG);
     });
 
     it('should resolve unknown locations to BAV (default)', () => {
@@ -83,6 +116,7 @@ describe('Provider Registry', () => {
 
     it('should be case-insensitive', () => {
       expect(resolveProvider('lilienthal')).toBe(WasteProvider.ABFALL_IO_ASO);
+      expect(resolveProvider('siegburg')).toBe(WasteProvider.RSAG);
     });
   });
 

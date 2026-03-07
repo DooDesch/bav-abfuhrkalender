@@ -22,10 +22,10 @@ export default function BottomNav() {
   const [shouldAnimate, setShouldAnimate] = useState(false);
 
   useEffect(() => {
-    // Only animate if this is the first time the component has mounted
     if (!hasAnimatedOnce) {
-      setShouldAnimate(true);
       hasAnimatedOnce = true;
+      const t = setTimeout(() => setShouldAnimate(true), 0);
+      return () => clearTimeout(t);
     }
   }, []);
 
